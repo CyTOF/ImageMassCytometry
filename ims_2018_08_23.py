@@ -29,7 +29,6 @@ prefilter_area_closing = 400
 prefilter_median_size = 6
 thresh_alpha = 1.2
 
-
 prefilter_asf_sizes = [1, 2, 4, 8]
 
 optimal_thresholds = {
