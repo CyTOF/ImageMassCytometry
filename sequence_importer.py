@@ -16,13 +16,14 @@ class SequenceImporter(object):
                                 os.listdir(folder)))
         if not self.marker_list is None:
             filtered_filenames = []
-            #pdb.set_trace()
             for marker in self.marker_list:
                 filtered_filenames.extend(list(filter(lambda x: x.split('.')[0].split('_')[-1] == marker,
                                                       filenames)))
             filenames = filtered_filenames
 
         nb_channels = len(filenames)
+        if nb_channels==0:
+            raise ValueError("No image found for markers: %s" % str(self.marker_list))
         temp = skimage.io.imread(os.path.join(folder, filenames[0]))
         width = temp.shape[0]
         height = temp.shape[1]

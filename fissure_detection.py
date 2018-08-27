@@ -19,7 +19,7 @@ from skimage.morphology import closing, disk, square, dilation
 from skimage.morphology import remove_small_objects
 
 class FissureDetection(object):
-    def __init__(self, settings_filename=None, settings=None):
+    def __init__(self, settings_filename=None, settings=None, tissue_id=None):
         if settings is None and settings_filename is None:
             raise ValueError("Either a settings object or a settings filename has to be given.")
         if not settings is None:
@@ -93,8 +93,14 @@ class FissureDetection(object):
 
         markers = ['avanti', 'Rutenium Red']
         si = SequenceImporter(markers)
-        img, channel_names = si(self.settings.input_folder)
-
+        try:
+            img, channel_names = si(self.settings.input_folder)
+        except:
+            si = SequenceImporter()
+            img, channel_names = si(self.settings.input_folder)
+            output = np.zeros((img.shape[0], img.shape[1]))
+            return output
+        
         image = np.mean(img, axis=2)
         if downscale:
             image_downscale = rescale(image, .25)
@@ -197,29 +203,18 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--tissue_id', dest='tissue_id', required=False,
                         type=str, default=None, 
                         help='Tissue id (optional). If not specificied, the tissue id from the settings file is taken.')
-
-
-    parser.add_argument('--histo', dest='histo', required=False,
-                        type=bool, default=False,
-                        help='Plots the histogram of the channels.')
     parser.add_argument('--segmentation', dest='segmentation', required=False,
-                        type=bool, default=False,
+                        action='store_true',
+#                        type=bool, default=False,
                         help='Segmentation of the fissure.')
-    parser.add_argument('--save_overlay', dest='save_overlay', required=False,
-                        type=bool, default=False,
-                        help='To save the overlay')
 
     args = parser.parse_args()
-    il = FissureDetection(args.settings_file, tissue_id=args.tissue_id)
-        
-    if args.histo:
-        print(' *** Fissure Detection Histogram Plotting ***')
-        il.plot_histogram()
-        
+    fd = FissureDetection(args.settings_file, tissue_id=args.tissue_id)
+            
     if args.segmentation:
-        print(' *** Postprocessing ***')
-        il.post_processing()
+        print(' *** Fissure detection ***')
+        output_image = fd()
+        fd.write_image(output_image)
+        
+    
 
-    if args.save_overlay:
-        print(' *** Saving overlay to ***')
-        il.save_overlay()
