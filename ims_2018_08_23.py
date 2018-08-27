@@ -18,6 +18,7 @@ ilastik_input_rgb_filename = os.path.join(ilastik_input_rgb_folder, 'rgb_%s.tif'
 
 ilastik_folder = os.path.join(base_folder, 'Ilastik', 'data','rgb')
 ilastik_filename = os.path.join(ilastik_folder, 'rgb_%s_Simple Segmentation.png' % dataset)
+ilastik_backup_filename = os.path.join(ilastik_folder, 'rgb_%s_Simple Segmentation_backup.png' % dataset)
 downsample_image = os.path.join(ilastik_folder, 'rgb_%s.tif' % dataset)
 
 makefolders = [output_folder, debug_folder, plot_folder]

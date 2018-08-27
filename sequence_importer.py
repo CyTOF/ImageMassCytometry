@@ -12,14 +12,14 @@ class SequenceImporter(object):
         return
 
     def __call__(self, folder):
-        filenames = filter(lambda x: os.path.splitext(x)[-1] in ['.tif', '.tiff', '.png'],
-                           os.listdir(folder))
+        filenames = list(filter(lambda x: os.path.splitext(x)[-1] in ['.tif', '.tiff', '.png'],
+                                os.listdir(folder)))
         if not self.marker_list is None:
             filtered_filenames = []
             #pdb.set_trace()
             for marker in self.marker_list:
-                filtered_filenames.extend(filter(lambda x: x.split('.')[0].split('_')[-1] == marker,
-                                                 filenames))
+                filtered_filenames.extend(list(filter(lambda x: x.split('.')[0].split('_')[-1] == marker,
+                                                      filenames)))
             filenames = filtered_filenames
 
         nb_channels = len(filenames)

@@ -14,8 +14,9 @@ For this, we need to edit the file copy_data.py and launch it with
 
 ## Preparation of data for Ilastik
 
-To prepare data for ilastik, launch rgb_generate:
-`python rgb_generate.py`
+To prepare data for ilastik, launch `process_ilastik.py`. For postfiltering
+nothing is to be done (this is done on the fly during reading):
+`python process_ilastik.py --tissue_id Tonsil_D1 --prefilter`
 
 Then make the classification with ilastik to find the B- and T-regions
 
