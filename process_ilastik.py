@@ -149,21 +149,23 @@ if __name__ == '__main__':
         description=('Run post filter on Ilastik results in order to'
                      'get a smoother output and to assign grey levels'
                      'according to what is required for the rest.'))
-    parser.add_argument('--prepare', dest='prepare', required=False,
-                        type=bool, default=False,
-                        help='The script will prepare an RGB file for Ilastik processing.')
-    parser.add_argument('--post', dest='post', required=False,
-                        type=bool, default=False,
-                        help='The script will adapt the output to the required format (no filter).')
-    parser.add_argument('--save_overlay', dest='save_overlay', required=False,
-                        type=bool, default=False,
-                        help='To save the overlay')
+
     parser.add_argument('-s', '--settings_file', dest='settings_file', required=True,
                         type=str,
                         help='settings file for the analysis. Often the settings file is in the same folder.')
     parser.add_argument('-t', '--tissue_id', dest='tissue_id', required=False,
                         type=str, default=None, 
                         help='Tissue id (optional). If not specificied, the tissue id from the settings file is taken.')
+
+    parser.add_argument('--prepare', dest='prepare', required=False,
+                        action='store_true',
+                        help='The script will prepare an RGB file for Ilastik processing.')
+    parser.add_argument('--post', dest='post', required=False,
+                        action='store_true',
+                        help='The script will adapt the output to the required format (no filter).')
+    parser.add_argument('--save_overlay', dest='save_overlay', required=False,
+                        action='store_true',
+                        help='To save the overlay of B-region and T-region on top of the image.')
 
     args = parser.parse_args()
     il = Ilastik(args.settings_file, tissue_id=args.tissue_id)

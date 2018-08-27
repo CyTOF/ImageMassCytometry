@@ -205,7 +205,6 @@ if __name__ == '__main__':
                         help='Tissue id (optional). If not specificied, the tissue id from the settings file is taken.')
     parser.add_argument('--segmentation', dest='segmentation', required=False,
                         action='store_true',
-#                        type=bool, default=False,
                         help='Segmentation of the fissure.')
 
     args = parser.parse_args()
