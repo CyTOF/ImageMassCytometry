@@ -31,3 +31,5 @@ In this case, it will copy an empty image to the corresponding folder.
 
 ## make the distance analysis for the sub-populations
 
+First, we need to define the populations. This can be done in the settings file
+(dictionary `populations`)

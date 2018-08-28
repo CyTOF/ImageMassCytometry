@@ -32,6 +32,23 @@ thresh_alpha = 1.2
 
 prefilter_asf_sizes = [1, 2, 4, 8]
 
+populations = {
+    'Tonsil_D1': {
+        'Tfh' : ['Bcl-6', 'CD279(PD-1)', 'CD3'],
+        'Macrophage' : ['CD45', 'CD14', 'CD11c'],
+        'DC1' : ['CD370', 'CD141',  'HLA-DR'],
+        'DC2' : ['CD11c',  'CD1c-biotin-NA',  'HLA-DR'],
+        'pDC' : ['CD123', 'CD303(BDCA2)',  'HLA-DR'],
+        },
+    'Tonsil_D2': {
+        'Tfh' : ['Bcl-6', 'CD279(PD-1)', 'CD3'],
+        'Macrophage' : ['CD45', 'CD14', 'CD11c'],
+        'DC1' : ['CD370', 'CD141',  'HLA-DR'],
+        'DC2' : ['CD11c',  'CD1c-biotin-NA',  'HLA-DR'],
+        'pDC' : ['CD123', 'CD303(BDCA2)',  'HLA-DR'],
+        },
+    }
+
 optimal_thresholds = {
     'Tonsil_ID120828D18_M2_2': {
         'CD3': 1.202,
@@ -94,37 +111,38 @@ optimal_thresholds = {
         'Bcl6': 0.30},
     'Tonsil_D1': {
         'CD3': 5.0,
-        'PD1': 0.909,
+        'CD279(PD-1)': 0.909,
         'CXCR5': 0.65,
         'CD11c': 1.523,
         'CD370': 0.56,
         'CD206': 0.339,
-        'CD1c': 0.376,
+        'CD1c-biotin-NA': 0.376,
         'CD45': 13.0,
-        'Bcl6': 0.30,
+        'Bcl-6': 0.30,
         'CD14': 1.0,
         'CD141': 1.0,
         'CD123': 1.0,
-        'CD303': 1.0,
-        'HLADR': 1.0
-        },
+        'CD303(BDCA2)': 1.0,
+        'HLA-DR': 1.0
+        },    
     'Tonsil_D2': {
         'CD3': 5.0,
-        'PD1': 0.909,
+        'CD279(PD-1)': 0.909,
         'CXCR5': 0.65,
         'CD11c': 1.523,
         'CD370': 0.56,
         'CD206': 0.339,
-        'CD1c': 0.376,
+        'CD1c-biotin-NA': 0.376,
         'CD45': 13.0,
-        'Bcl6': 0.30,
+        'Bcl-6': 0.30,
         'CD14': 1.0,
         'CD141': 1.0,
         'CD123': 1.0,
-        'CD303': 1.0,
-        'HLADR': 1.0
+        'CD303(BDCA2)': 1.0,
+        'HLA-DR': 1.0
         },
 }
+
 
 spot_detection = {#'eps': 0.016,
                   'eps': 0.02,

@@ -14,6 +14,7 @@ import skimage.io
 from skimage.filters import median 
 from skimage.morphology import opening, closing, reconstruction, disk
 from skimage.transform import rescale
+from skimage.morphology import remove_small_holes
 
 
 class Ilastik(object):
