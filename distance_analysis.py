@@ -373,7 +373,7 @@ class DistanceAnalyzer(object):
     
     
     
-class ParameterSetup(object):
+class ParameterSetup(DistanceAnalyzer):
     
     def __init__(self, settings_filename=None, settings=None, 
                  tissue_id=None):
@@ -398,7 +398,7 @@ class ParameterSetup(object):
         self.fissure = FissureDetection(settings=self.settings)
         self.cell_detector = CellDetection(settings=self.settings)
         self.ilastik = Ilastik(settings=self.settings)
-        self.da = DistanceAnalyzer(settings=self.settings)
+        #self.da = DistanceAnalyzer(settings=self.settings)
     
     def multiply_and_clip(self, img, alpha):
         out = img.copy()
@@ -1253,7 +1253,7 @@ class ParameterSetup(object):
         radius = (window_size - 1) / 2
         nb_samples_max = nb_rows * nb_cols
         
-        print('population %i' % population)
+        print('population %s' % population)
         
         img, channel_names = self.get_population(population)
         
@@ -1301,7 +1301,7 @@ class ParameterSetup(object):
             
                         # find nb_samples and nb_rows
             nb_samples = min(nb_samples_max, len(intensities) - start_index)
-            nb_rows = min(nb_rows_max, nb_samples / nb_cols)
+            nb_rows = int(min(nb_rows_max, nb_samples / nb_cols))
             rgb_image = 255 * np.ones((nb_rows * window_size, nb_cols * window_size, 3))
 
             for t_row in range(nb_rows):
@@ -1316,10 +1316,10 @@ class ParameterSetup(object):
                     col = np.rint(col_).astype(np.int)
                     ws_label = ws[row, col]
                     
-                    y1 = max(0, row-radius)
-                    y2 = min(row+radius, ws.shape[0])
-                    x1 = max(0, col-radius)
-                    x2 = min(col+radius, ws.shape[1])
+                    y1 = int(max(0, row-radius))
+                    y2 = int(min(row+radius, ws.shape[0]))
+                    x1 = int(max(0, col-radius))
+                    x2 = int(min(col+radius, ws.shape[1]))
                     height = np.rint(y2-y1).astype(np.int)
                     width= np.rint(x2-x1).astype(np.int)
                     
@@ -1346,7 +1346,7 @@ class ParameterSetup(object):
 
             # writing the output
             filename = os.path.join(output_folder, 
-                                    'gallery_population%i_%s.png' % (population, channel_name))
+                                    'gallery_population%s_%s.png' % (population, channel_name))
             skimage.io.imsave(filename, rgb_image.astype(np.uint8))
 
             # write with matplotlib
@@ -1928,24 +1928,12 @@ class ParameterSetup(object):
     
     def prepare_threshold_panels(self, method='raw', populations=None):
         if populations is None:
-            populations = [1, 2, 3, 4]
+            populations = list(self.settings.populations[self.settings.dataset].keys())
 
-        self.plot_thresholds(method=method, populations=populations)
+        #self.plot_thresholds(method=method, populations=populations)
         
         for population in populations: 
             start_threshold = self.settings.optimal_thresholds[self.settings.dataset]
-#             start_threshold = {
-#                 'CD11c': 1.5,
-#                 'CD370': 0.4,
-#                 'CD206': 0.3,
-#                 'CD3': 5, 
-#                 'CXCR5': 0.45,
-#                 'PD1': 0.8,
-#                 'CD1c': 0.3,
-#                 'CD14': 1.2,
-#                 'Bcl6': 0.3,
-#                 'CD45': 13,
-#                 }
             self.make_galery_images(population=population, nb_rows=800,
                                   start_threshold = start_threshold)
             
@@ -1962,11 +1950,12 @@ class ParameterSetup(object):
             os.makedirs(out_folder)
 
         if populations is None:
-            populations = [1, 2, 3, 4]
+            populations = list(self.settings.populations[self.settings.dataset].keys())
+            
         channel_result = {}
         population_result = {}
         for population in populations:
-            print('population %i' % population)
+            print('population %s' % population)
             
             img, channel_names = self.get_population(population)
 
@@ -2002,9 +1991,17 @@ class ParameterSetup(object):
                 plt.grid(b=True, which='major', linewidth=1)
                 
                 filename = os.path.join(out_folder, 
-                                        'number_selected_cells_population%i_%s_method_%s.png' % (population, channel_name, method))
+                                        'number_selected_cells_population_%s_%s_method_%s.png' % (population, channel_name, method))
                 plt.savefig(filename)
                 plt.close()
+                
+                perc_thresholds = np.percentile(intensities, [95, 99])
+                
+                print('%s\t90-percentile (%i positive): %.3f,\t95-percentile (%i positive): %.3f' % (channel_name, 
+                                                                                                     (intensities>perc_thresholds[0]).sum(),
+                                                                                                     perc_thresholds[0], 
+                                                                                                     (intensities>perc_thresholds[1]).sum(),
+                                                                                                     perc_thresholds[1]))
         return
 
     
@@ -2129,6 +2126,9 @@ if __name__ == '__main__':
     parser.add_argument('--analysis', dest='analysis', required=False,
                         action='store_true',
                         help='Perform the analysis with the chosen thresholds.')
+    parser.add_argument('--plot_thresholds', dest='plot_thresholds', required=False,
+                        action='store_true',
+                        help='Plots the histograms and different thresholds.')
 
     args = parser.parse_args()
     da = DistanceAnalyzer(args.settings_file, tissue_id=args.tissue_id)
@@ -2137,5 +2137,9 @@ if __name__ == '__main__':
         print(' *** Analysis of spatial distribution ***')
         da.analyze_all_populations()
         
-        
+    if args.plot_thresholds:
+        print(' *** plotting intensity distributions and thresholds ***')
+        ps = ParameterSetup(args.settings_file, tissue_id=args.tissue_id)
+        #ps.plot_thresholds('raw')
+        ps.prepare_threshold_panels('raw')
 
