@@ -583,9 +583,12 @@ class CellDetection(object):
 
     def write_image(self, image):
         filename = os.path.join(self.image_result_folder, 
-                                'dna_cell_segmentation.png')
-        skimage.io.imsave(filename, image)
-
+                                'dna_cell_segmentation.tiff')
+        skimage.external.tifffile.imsave(filename, image.astype('uint32'))
+        # pdb.set_trace()
+        # bug: this does not work ! skimage.io.imsave(filename, image)
+        # fp = open(filename, image)
+        
         rgb_image = self.make_random_colors(image)
         filename = os.path.join(self.image_result_folder, 
                                 'dna_cell_segmentation_random_colors.png')
@@ -595,7 +598,7 @@ class CellDetection(object):
 
     def read_image(self):
         filename = os.path.join(self.image_result_folder, 
-                                'dna_cell_segmentation.png')
+                                'dna_cell_segmentation.tiff')
         image = skimage.io.imread(filename)
         return image
 
