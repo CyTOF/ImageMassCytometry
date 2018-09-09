@@ -1,5 +1,6 @@
 import os, sys, re, time
 import numpy as np
+import argparse
 import pdb 
 
 from sequence_importer import SequenceImporter
@@ -24,7 +25,7 @@ from skimage.filters import threshold_otsu
 from skimage.filters import threshold_isodata
 from skimage.morphology import diamond, reconstruction
 
-from settings import Settings
+from settings import Settings, overwrite_settings
 
 from skimage.transform import rescale, resize, downscale_local_mean
 
@@ -471,7 +472,7 @@ class SpotDetector(object):
 
 class CellDetection(object):
 
-    def __init__(self, settings_filename=None, settings=None):
+    def __init__(self, settings_filename=None, settings=None, tissue_id=None):
         if settings is None and settings_filename is None:
             raise ValueError("Either a settings object or a settings filename has to be given.")
         if not settings is None:
@@ -483,6 +484,12 @@ class CellDetection(object):
             if not os.path.exists(folder):
                 os.makedirs(folder)
 
+        if not tissue_id is None:
+            print('Overwriting settings ... ')
+            self.settings = overwrite_settings(self.settings, tissue_id)
+            print('tissue id: %s' % tissue_id)
+            print('output_folder: %s' % self.settings.output_folder)
+
         self.sp = SpotDetector(settings=self.settings)
         self.fissure = FissureDetection(settings=self.settings)
         self.image_result_folder = os.path.join(self.settings.output_folder, 
@@ -490,6 +497,142 @@ class CellDetection(object):
         if not os.path.isdir(self.image_result_folder):
             os.makedirs(self.image_result_folder)
 
+
+    def projection(self):
+        si = SequenceImporter()
+        img, channel_names = si(self.settings.input_folder)
+
+        projection_markers = list(filter(lambda x: x[:2] == 'CD', list(channel_names.values() ) ))
+        si = SequenceImporter(projection_markers)
+        img, channel_names = si(self.settings.input_folder)
+        
+        avg_image = np.average(img, axis=2)
+        projection_folder = os.path.join(self.settings.debug_folder, 'projection_folder')
+        if not os.path.isdir(projection_folder):
+            os.makedirs(projection_folder)
+            print('made %s' % projection_folder)
+        
+        filename = os.path.join(projection_folder, 'projection_%s.png' % self.settings.dataset)
+        image_max = np.percentile(avg_image, [99])[0]
+        image_min = np.percentile(avg_image, [5])[0]
+        avg_image_norm = 255.0 * (avg_image - image_min) / (image_max - image_min)
+        avg_image_norm[avg_image_norm > 255] = 255
+
+        skimage.io.imsave(filename, avg_image_norm.astype(np.uint8))
+        
+        return avg_image_norm.astype(np.uint8)
+    
+    def test_segmentation(self):
+        RADIUS = 8
+        
+        xmin = 656
+        xmax = 956
+        ymin = 1020
+        ymax = 1320
+        
+        print('Reading data ... ')
+        si = SequenceImporter(['DNA1'])
+        img, channel_names = si(self.settings.input_folder)
+        image = img[xmin:xmax,ymin:ymax,0]
+
+        print('Detecting spots ... ')
+        start_time = time.time()
+        coordinates = self.spot_detection_dna_raw(image)
+        diff_time = time.time() - start_time
+        print('\ttime elapsed, spot detection: %.2f s' % diff_time)
+
+        print('Fissure image ... ')
+        start_time = time.time()
+        fissure_image = self.fissure.get_image(False)
+        fissure_image = fissure_image[xmin:xmax,ymin:ymax]
+        filtered_coordinates = list(filter(lambda x: fissure_image[x] == 0, coordinates))
+        print(len(coordinates), ' --> ', len(filtered_coordinates))
+        coordinates = filtered_coordinates
+        diff_time = time.time() - start_time
+        print('\ttime elapsed, fissure exclusion: %.2f s' % diff_time)
+
+        print('get membrane image ... ')
+        membrane_img = self.projection()
+        membrane_img = membrane_img[xmin:xmax,ymin:ymax]
+        
+        print('Voronoi diagram ... ')
+        start_time = time.time()
+        ws = self.get_voronoi_regions(image, coordinates, radius=RADIUS, 
+                                      cd_image=membrane_img, alpha=0.1)
+        diff_time = time.time() - start_time
+        print('\ttime elapsed, voronoi: %.2f s' % diff_time)
+
+        print('Writing result image ... ')
+        self.write_image_debug(ws)
+
+        # write a few debug images.        
+        ov = Overlays()
+        colors = {1: (255, 0, 0), 2:(40, 120, 255)}
+        out_folder = os.path.join(self.settings.debug_folder, 'cell_segmentation_%s' % self.settings.dataset)
+
+        spot_img = np.zeros(ws.shape, dtype=np.uint8)
+        col_indices = [x[1] for x in coordinates]
+        row_indices = [x[0] for x in coordinates]
+        spot_img[row_indices, col_indices] = 2
+        
+        image = self.sp.remove_salt_noise(image)
+        perc = np.percentile(image, [10, 98])
+        dna_min = np.float(perc[0])
+        dna_max = np.float(perc[1])
+        #pdb.set_trace()
+        image = 255.0 * (image - dna_min) / (dna_max - dna_min)
+        image[image>255] = 255
+        image[image < 0] = 0
+        image = image.astype(np.uint8)
+        
+        img_overlay = ov.overlay_grey_img(membrane_img, spot_img, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'nuclei_detection_1.png'), img_overlay)
+        img_overlay = ov.overlay_grey_img(image, spot_img, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'nuclei_detection_2.png'), img_overlay)
+
+        wsl = dilation(ws, disk(1)) - erosion(ws, disk(1))
+        wsl[wsl>0] = 1
+        wsl[row_indices, col_indices] = 2
+        wsl_membrane = wsl
+        img_overlay = ov.overlay_grey_img(membrane_img, wsl, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'cell_contours_with_membrane_1.png'), img_overlay)
+        img_overlay = ov.overlay_grey_img(image, wsl, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'cell_contours_with_membrane_2.png'), img_overlay)
+
+        ws = self.get_voronoi_regions(image, coordinates, radius=RADIUS)
+        wsl = dilation(ws, disk(1)) - erosion(ws, disk(1))
+        wsl[wsl>0] = 1
+        wsl[row_indices, col_indices] = 2
+        wsl_distance = wsl
+        img_overlay = ov.overlay_grey_img(membrane_img, wsl, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'cell_contours_with_distance_1.png'), img_overlay)
+        img_overlay = ov.overlay_grey_img(image, wsl, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'cell_contours_with_distance_2.png'), img_overlay)
+        
+        skimage.io.imsave(os.path.join(out_folder, 'raw_membrane.png'), membrane_img)
+        skimage.io.imsave(os.path.join(out_folder, 'raw_dna.png'), image)
+        colorimage = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
+        colorimage[:,:,0] = image
+        colorimage[:,:,1] = membrane_img
+        skimage.io.imsave(os.path.join(out_folder, 'raw_rgb.png'), colorimage)
+        
+        colors = {1: (30, 150, 255), 2:(30, 150, 255)}
+        img_overlay = ov.overlay_rgb_img(colorimage, wsl_membrane, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'rgb_all_membrane.png'), img_overlay)
+ 
+        colors = {1: (30, 150, 255), 2:(30, 150, 255)}
+        img_overlay = ov.overlay_rgb_img(colorimage, wsl_distance, colors=colors, contour=False)
+        skimage.io.imsave(os.path.join(out_folder, 'rgb_all_distance.png'), img_overlay)
+        
+        wsl_distance[wsl_distance>1] = 0
+        wsl_distance[wsl_distance>0] = 255
+        skimage.io.imsave(os.path.join(out_folder, 'wsl_distance.png'), wsl_distance)
+
+        wsl_membrane[wsl_membrane!=1] = 0
+        wsl_membrane[wsl_membrane>0] = 255
+        skimage.io.imsave(os.path.join(out_folder, 'wsl_membrane.png'), wsl_membrane)
+
+        return
 
     def __call__(self):
         
@@ -510,11 +653,19 @@ class CellDetection(object):
         filtered_coordinates = list(filter(lambda x: fissure_image[x] == 0, coordinates))
         print(len(coordinates), ' --> ', len(filtered_coordinates))
         coordinates = filtered_coordinates
+        diff_time = time.time() - start_time
+        print('\ttime elapsed, fissure exclusion: %.2f s' % diff_time)
+
+        print('get membrane image ... ')
+        start_time = time.time()
+        membrane_img = self.projection()
+        diff_time = time.time() - start_time
         print('\ttime elapsed, fissure exclusion: %.2f s' % diff_time)
 
         print('Voronoi diagram ... ')
         start_time = time.time()
-        ws = self.get_voronoi_regions(image, coordinates, radius=8)
+        ws = self.get_voronoi_regions(image, coordinates, radius=8, 
+                                      cd_image=membrane_img, alpha=0.1)
         diff_time = time.time() - start_time
         print('\ttime elapsed, voronoi: %.2f s' % diff_time)
 
@@ -523,7 +674,8 @@ class CellDetection(object):
         
         return ws
 
-    def get_voronoi_regions(self, image, coordinates, radius=5):
+    def get_voronoi_regions(self, image, coordinates, radius=5, 
+                            cd_image=None, alpha=1.0):
         marker = np.ones(image.shape, dtype=np.uint8)
         yvec = [coord[0] for coord in coordinates]
         xvec = [coord[1] for coord in coordinates]
@@ -533,6 +685,12 @@ class CellDetection(object):
         marker = 1 - marker
 
         marker_label = label(marker)
+        if not cd_image is None:
+            print('composite distance map')
+            distance_map += alpha * cd_image
+            distance_map = 255.0 * distance_map / distance_map.max()
+            distance_map = distance_map.astype(np.uint8)
+            distance_map[marker>0] = 0
         ws = watershed(distance_map, marker_label, mask=mask,
                        watershed_line=False)
         
@@ -596,6 +754,24 @@ class CellDetection(object):
 
         return
 
+    def write_image_debug(self, image):
+        out_folder = os.path.join(self.settings.debug_folder, 'cell_segmentation_%s' % self.settings.dataset)
+        if not os.path.isdir(out_folder):
+            os.makedirs(out_folder)
+        filename = os.path.join(out_folder, 
+                                'dna_cell_segmentation.tiff')
+        skimage.external.tifffile.imsave(filename, image.astype('uint32'))
+        # pdb.set_trace()
+        # bug: this does not work ! skimage.io.imsave(filename, image)
+        # fp = open(filename, image)
+        
+        rgb_image = self.make_random_colors(image)
+        filename = os.path.join(out_folder, 
+                                'dna_cell_segmentation_random_colors.png')
+        skimage.io.imsave(filename, rgb_image)
+
+        return
+
     def read_image(self):
         filename = os.path.join(self.image_result_folder, 
                                 'dna_cell_segmentation.tiff')
@@ -616,6 +792,34 @@ class CellDetection(object):
         return image
 
 
+if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser( \
+        description=('Run post filter on Ilastik results in order to'
+                     'get a smoother output and to assign grey levels'
+                     'according to what is required for the rest.'))
 
+    parser.add_argument('-s', '--settings_file', dest='settings_file', required=True,
+                        type=str,
+                        help='settings file for the analysis. Often the settings file is in the same folder.')
+    parser.add_argument('-t', '--tissue_id', dest='tissue_id', required=False,
+                        type=str, default=None, 
+                        help='Tissue id (optional). If not specificied, the tissue id from the settings file is taken.')
 
+    parser.add_argument('--test_projection', dest='test_projection', required=False,
+                        action='store_true',
+                        help='This will run some preliminary test regarding projections for cell segmentation.')
+    parser.add_argument('--test_segmentation', dest='test_segmentation', required=False,
+                        action='store_true',
+                        help='This is for testing segmentation.')
+
+    args = parser.parse_args()
+    
+    cd = CellDetection(args.settings_file, tissue_id=args.tissue_id)
+    if args.test_projection:
+        print(' *** Perform projection of membrane proteines ***')
+        cd.projection()
+        
+    if args.test_segmentation:
+        print(' *** Perform projection of membrane proteines ***')
+        cd.test_segmentation()
