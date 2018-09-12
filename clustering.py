@@ -59,11 +59,24 @@ class ClusterAnalysis(object):
         self.fissure = FissureDetection(settings=self.settings)
         self.cell_detector = CellDetection(settings=self.settings)
         
-        self.markers = ['Bcl-6', 'CD279(PD-1)', 'CD3',
-                        'CD45', 'CD14',
-                        'CD370', 'CD141',
-                        'CD11c',  'CD1c-biotin-NA',  'HLA-DR',
-                        'CD123', 'CD303(BDCA2)']
+        #self.markers = ['Bcl-6', 'CD279(PD-1)', 'CD3',
+        #                'CD45', 'CD14',
+        #                'CD370', 'CD141',
+        #                'CD11c',  'CD1c-biotin-NA',  'HLA-DR',
+        #                'CD123', 'CD303(BDCA2)']
+
+        self.all_markers = ['CD206', 'IL-21', 'CD185(CXCR5)', 'CD45', 'CXCL13', 
+                            'CD1c-biotin-NA', 'CD303(BDCA2)', 'CD11b', 'Bcl-6', 'CD45RA', 
+                            'E-Cadherin', 'CD141', 'CD123', 'CD68', 'CD279(PD-1)', 
+                            'HLA-DR', 'aSMA', 'CD370', 'CD11c', 'CD19', 'ICOS', 
+                            'CD56(NCAM)', 'CD3', 'CD14']
+        self.acceptable_markers = ['CD206', 'IL-21', 'CD185(CXCR5)', 'CD45', 'CXCL13', 
+                                   'CD303(BDCA2)', 'CD11b', 'Bcl-6', 'CD45RA', 
+                                   'E-Cadherin', 'CD141', 'CD123', 'CD68', 'CD279(PD-1)', 
+                                   'HLA-DR', 'aSMA', 'CD370', 'CD11c', 'CD19',  
+                                   'CD56(NCAM)', 'CD3', 'CD14']
+
+        self.markers = self.acceptable_markers
         # + CD19 (cellules B), abondant !
         # + E-cadherin (la crypte)
         # + alphasma (vaisseaux sanguins)
@@ -94,6 +107,7 @@ class ClusterAnalysis(object):
         for j in range(P):
             props = regionprops(ws, img[:,:,j])
             intensities = np.array([props[k]['mean_intensity'] for k in range(len(props))])
+            
             # centers = np.array([props[k]['centroid'] for k in range(len(props))])
             X[:,j] = intensities
         
@@ -182,12 +196,23 @@ class ClusterAnalysis(object):
             Xs = Xs[:,marker_indices]
 
         columns = markers
+        #object_labels = np.arange(X.shape[0]) + 1
         df = pd.DataFrame(Xs, columns=columns)
-        cmap = sns.diverging_palette(10, 220, sep=80, n=30)
+        cmap = sns.diverging_palette(240, 0, s=90, l=50, sep=80, n=30)
         g = sns.clustermap(df, method='ward', metric='euclidean', 
                            robust=True, cmap=cmap, col_cluster=True,
                            yticklabels=False)
         g.savefig(os.path.join(self.plot_projection_folder, 'ward%s.png' % filename_ext))
+
+        # detail with row names
+        #y_dim = np.max([np.int(X.shape[0] / 60.0), 8])
+        #y_dim = 16
+        #fig, ax = plt.subplots(figsize=(8, y_dim))
+        #g = sns.clustermap(df, method='ward', metric='euclidean', 
+        #                   robust=True, cmap=cmap, col_cluster=True,
+        #                   yticklabels=True)
+        #plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0) 
+        #g.savefig(os.path.join(self.plot_projection_folder, 'ward%s_detail.pdf' % filename_ext))
         
         return
     
