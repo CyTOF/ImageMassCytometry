@@ -51,3 +51,4 @@ class Overlays(object):
             overlay_img[display_img==value] = colors[value]
 
         return overlay_img 
+
