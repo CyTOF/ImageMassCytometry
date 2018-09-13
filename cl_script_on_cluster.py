@@ -5,8 +5,7 @@ import clustering
 ca = clustering.ClusterAnalysis('./ims_2018_08_23.py')
 
 X = ca.get_data()
-Xnorm = ca.normalize(X, method='p')
-Xs = ca.subsample(Xnorm, 2000)
+Xs = ca.normalize(X, method='p')
 
 res = ca.hierarchical_clustering(Xs)
 print('DONE')
