@@ -1,4 +1,5 @@
 import os
+import pickle
 import argparse
 import pdb 
 
@@ -6,6 +7,7 @@ import pdb
 import numpy as np 
 
 from scipy.stats import gaussian_kde
+from scipy.cluster import hierarchy
 
 import pandas as pd 
 
@@ -50,10 +52,12 @@ class ClusterAnalysis(object):
         for folder in self.settings.makefolders:
             if not os.path.exists(folder):
                 os.makedirs(folder)
-
+                
+        self.cluster_folder = os.path.join(self.settings.output_folder, 'clustering')
         self.plot_projection_folder = os.path.join(self.settings.output_folder, 'projections')
-        if not os.path.isdir(self.plot_projection_folder):
-            os.makedirs(self.plot_projection_folder)
+        for folder in [self.cluster_folder, self.plot_projection_folder]: 
+            if not os.path.isdir(folder):
+                os.makedirs(folder)
             
         self.sp = SpotDetector(settings=self.settings)
         self.fissure = FissureDetection(settings=self.settings)
@@ -65,18 +69,27 @@ class ClusterAnalysis(object):
         #                'CD11c',  'CD1c-biotin-NA',  'HLA-DR',
         #                'CD123', 'CD303(BDCA2)']
 
+        #CD1c : remove (too bad)
+        #ICOS : enlever (similaire a PD1)
+        #CD185 : does not look good (should only be in B-region)
+        #CD56 : probably wrong marker --> check in the pipeline
+        #CD11b : unsure what to do ... artefact, spatial effect ? 
+        #CD303 : high noise level, there should be quite a number of cells in T-region.
+
+        # all markers except for empty, 
         self.all_markers = ['CD206', 'IL-21', 'CD185(CXCR5)', 'CD45', 'CXCL13', 
                             'CD1c-biotin-NA', 'CD303(BDCA2)', 'CD11b', 'Bcl-6', 'CD45RA', 
                             'E-Cadherin', 'CD141', 'CD123', 'CD68', 'CD279(PD-1)', 
                             'HLA-DR', 'aSMA', 'CD370', 'CD11c', 'CD19', 'ICOS', 
                             'CD56(NCAM)', 'CD3', 'CD14']
-        self.acceptable_markers = ['CD206', 'IL-21', 'CD185(CXCR5)', 'CD45', 'CXCL13', 
-                                   'CD303(BDCA2)', 'CD11b', 'Bcl-6', 'CD45RA', 
+        self.acceptable_markers = ['CD206', 'IL-21', 'CD45', 'CXCL13', 
+                                   'Bcl-6', 'CD45RA', 
                                    'E-Cadherin', 'CD141', 'CD123', 'CD68', 'CD279(PD-1)', 
                                    'HLA-DR', 'aSMA', 'CD370', 'CD11c', 'CD19',  
-                                   'CD56(NCAM)', 'CD3', 'CD14']
+                                   'CD3', 'CD14']
 
         self.markers = self.acceptable_markers
+        self.nb_clusters = 20
         # + CD19 (cellules B), abondant !
         # + E-cadherin (la crypte)
         # + alphasma (vaisseaux sanguins)
@@ -180,7 +193,8 @@ class ClusterAnalysis(object):
         #pdb.set_trace()
         return tsne
         
-    def hierarchical_clustering(self, X=None, markers=None, filename_ext=''):
+    def hierarchical_clustering(self, X=None, markers=None, filename_ext='',
+                                export=True):
         
         if X is None:
             X = self.get_data()
@@ -198,23 +212,45 @@ class ClusterAnalysis(object):
         columns = markers
         #object_labels = np.arange(X.shape[0]) + 1
         df = pd.DataFrame(Xs, columns=columns)
-        cmap = sns.diverging_palette(240, 0, s=90, l=50, sep=80, n=30)
-        g = sns.clustermap(df, method='ward', metric='euclidean', 
-                           robust=True, cmap=cmap, col_cluster=True,
-                           yticklabels=False)
-        g.savefig(os.path.join(self.plot_projection_folder, 'ward%s.png' % filename_ext))
 
-        # detail with row names
-        #y_dim = np.max([np.int(X.shape[0] / 60.0), 8])
-        #y_dim = 16
-        #fig, ax = plt.subplots(figsize=(8, y_dim))
-        #g = sns.clustermap(df, method='ward', metric='euclidean', 
-        #                   robust=True, cmap=cmap, col_cluster=True,
-        #                   yticklabels=True)
-        #plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0) 
-        #g.savefig(os.path.join(self.plot_projection_folder, 'ward%s_detail.pdf' % filename_ext))
+        #dist_mat = distance.pdist(Xs, method='euclidean')
+        cluster_res = hierarchy.linkage(Xs, method='ward', metric='euclidean')
+        ct = hierarchy.cut_tree(cluster_res, n_clusters=self.nb_clusters)
+        col_pal = sns.color_palette("husl", self.nb_clusters)
+        #col_pal = sns.color_palette("bright", n_colors=self.nb_clusters)
+        cluster_assignment = ct.T[0]
+        col_vec = np.array(col_pal)[ct.T[0]]
         
-        return
+        #cmap = sns.diverging_palette(240, 0, s=90, l=50, sep=80, n=30)
+        cmap = sns.light_palette("navy", as_cmap=True)
+        g = sns.clustermap(df, row_linkage=cluster_res, robust=True, cmap=cmap, 
+                           col_cluster=True, yticklabels=False,
+                           row_colors=col_vec)
+        g.ax_col_dendrogram.set_visible(False)
+
+        for label in range(self.nb_clusters):
+            g.ax_col_dendrogram.bar(0, 0, color=col_pal[label],
+                                    label=label, linewidth=0)
+        g.ax_col_dendrogram.legend(loc="center", ncol=5)
+
+        # save file
+        g.savefig(os.path.join(self.cluster_folder, 'ward%s.png' % filename_ext))
+ 
+    
+        res = dict(zip(range(self.nb_clusters), [np.where(cluster_assignment==i) for i in range(self.nb_clusters)]))
+        if export:
+            filename = os.path.join(self.cluster_folder, 'cluster_assignment.pickle')
+            fp = open(filename, 'wb')
+            pickle.dump(res, fp)
+            fp.close()
+
+        # save dendrogram
+        fig = plt.figure(figsize=(Xs.shape[0] / 10, 8))
+        dn = hierarchy.dendrogram(cluster_res)
+        plt.savefig(os.path.join(self.cluster_folder, 'dendrogram_ward%s.pdf' % filename_ext))
+        plt.close('all')
+                
+        return res
     
     def make_intensity_density_plot(self, x, y, filename, x_name, y_name, 
                                     reduce_perc=None, 
