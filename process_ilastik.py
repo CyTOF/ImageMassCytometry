@@ -37,12 +37,31 @@ class Ilastik(object):
             if not os.path.exists(folder):
                 os.makedirs(folder)
     
+    def adjust(self, img, nb_rows, nb_cols, fill_value=0):
+        imout = np.zeros((nb_rows, nb_cols), dtype=img.dtype) + fill_value
         
+        if img.shape[0] > nb_rows:
+            img = img[:nb_rows,:]
+        if img.shape[1] > nb_cols:
+            img = img[:,:nb_cols]
+        delta_rows = (img.shape[0] - nb_rows) // 2
+        delta_cols = (img.shape[1] - nb_cols) // 2
+        imout[delta_rows:,delta_cols:] = img
+        return imout
+    
     def read_region_images(self):
         filename = self.settings.ilastik_filename
             
         im_small = skimage.io.imread(filename)
         img = rescale(im_small, 4, preserve_range=True)
+
+        # get the right size
+        si = SequenceImporter(['CD3'])
+        original_img, channel_names = si(self.settings.input_folder)
+        nb_rows = original_img.shape[0]
+        nb_cols = original_img.shape[1]
+        img = self.adjust(img, nb_rows, nb_cols, fill_value=255)
+        
         background = np.zeros(img.shape, dtype=np.uint8)
         background[img>250] = 255
         background = remove_small_holes(background.astype(np.bool), 
@@ -59,6 +78,7 @@ class Ilastik(object):
         tcell = remove_small_holes(tcell.astype(np.bool), 
                                    400, connectivity=2)
 
+        
         return background, bcell, tcell
     
     # DEPRECATED

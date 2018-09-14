@@ -18,6 +18,10 @@ import seaborn as sns
 
 # skimage imports
 from skimage.measure import label, regionprops
+from skimage.color import grey2rgb
+import skimage.io 
+
+import colorsys
 
 # sklearn imports
 from sklearn.decomposition import PCA
@@ -30,6 +34,7 @@ from settings import Settings, overwrite_settings
 from sequence_importer import SequenceImporter
 from fissure_detection import FissureDetection
 from cell_detection import SpotDetector, CellDetection
+from process_ilastik import Ilastik
 from visualization import Overlays
 
 class ClusterAnalysis(object):
@@ -62,6 +67,7 @@ class ClusterAnalysis(object):
         self.sp = SpotDetector(settings=self.settings)
         self.fissure = FissureDetection(settings=self.settings)
         self.cell_detector = CellDetection(settings=self.settings)
+        self.ilastik = Ilastik(settings=self.settings)
         
         #self.markers = ['Bcl-6', 'CD279(PD-1)', 'CD3',
         #                'CD45', 'CD14',
@@ -226,11 +232,12 @@ class ClusterAnalysis(object):
         g = sns.clustermap(df, row_linkage=cluster_res, robust=True, cmap=cmap, 
                            col_cluster=True, yticklabels=False,
                            row_colors=col_vec)
-        g.ax_col_dendrogram.set_visible(False)
+        #g.ax_col_dendrogram.set_visible(False)
 
         for label in range(self.nb_clusters):
             g.ax_col_dendrogram.bar(0, 0, color=col_pal[label],
-                                    label=label, linewidth=0)
+                                    label='%i(%i)' % (label, len(res[label])), 
+                                    linewidth=0)
         g.ax_col_dendrogram.legend(loc="center", ncol=5)
 
         # save file
@@ -239,7 +246,7 @@ class ClusterAnalysis(object):
     
         res = dict(zip(range(self.nb_clusters), [np.where(cluster_assignment==i) for i in range(self.nb_clusters)]))
         if export:
-            filename = os.path.join(self.cluster_folder, 'cluster_assignment.pickle')
+            filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % filename_ext)
             fp = open(filename, 'wb')
             pickle.dump(res, fp)
             fp.close()
@@ -251,6 +258,54 @@ class ClusterAnalysis(object):
         plt.close('all')
                 
         return res
+    
+    def export_cell_cluster_maps(self, cluster_filename):
+        col_pal = sns.color_palette("husl", self.nb_clusters)
+        
+        # import cluster results
+        fp = open(cluster_filename, 'rb')
+        cluster_assignment = pickle.load(fp)
+        fp.close()
+        
+        # get the individual cells.
+        ws = self.cell_detector.get_image(False)
+
+        # number of cells
+        N = np.max(ws)
+
+        background, b_region, t_region = self.ilastik.read_region_images()
+        region_image = np.zeros(b_region.shape, dtype=np.uint8)
+        region_image[b_region>0] = 100
+        region_image[t_region>0] = 200
+        
+        for cluster_label in cluster_assignment:
+            bin_vec = np.zeros(N + 1, dtype=np.float)
+            labels = np.array(cluster_assignment[cluster_label][0]) + 1
+            bin_vec[labels] = 1
+            #bin_vec = bin_vec * np.random.rand(N+1)
+
+            color_matrix_hsv = np.array((N + 1) * colorsys.rgb_to_hsv(*col_pal[cluster_label])).reshape((N + 1, 3))         
+            noise_vec_l = np.random.rand(N + 1)
+            noise_vec_s = np.random.rand(N + 1)
+
+            color_matrix_hsv[:,2] = color_matrix_hsv[:,2] + 0.5 * (noise_vec_l - 0.5)
+            color_matrix_hsv[:,1] = color_matrix_hsv[:,1] + 0.5 * (noise_vec_s - 0.5)
+            color_matrix_hsv[color_matrix_hsv > 1] = 1
+            color_matrix_hsv[color_matrix_hsv < 0] = 0
+
+            color_matrix_rgb = np.array([ colorsys.hsv_to_rgb(*color_matrix_hsv[i]) for i in range(color_matrix_hsv.shape[0])])
+            color_matrix_rgb = (bin_vec * color_matrix_rgb.T).T
+
+            color_img = 255.0 * color_matrix_rgb[ws]
+            color_img[color_img==0] = grey2rgb(region_image)[color_img==0]
+            
+            filename = os.path.join(self.cluster_folder, '%s_clusterid_%i_nb_%i.png' % (os.path.sep(cluster_filename)[0], 
+                                                                                        cluster_label, len(labels)))
+            print('write %s' % filename)
+            skimage.io.imsave(filename, color_img.astype(np.uint8))
+            if cluster_label > 3:
+                break
+        return
     
     def make_intensity_density_plot(self, x, y, filename, x_name, y_name, 
                                     reduce_perc=None, 
