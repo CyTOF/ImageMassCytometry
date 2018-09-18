@@ -88,14 +88,14 @@ class ClusterAnalysis(object):
                             'E-Cadherin', 'CD141', 'CD123', 'CD68', 'CD279(PD-1)', 
                             'HLA-DR', 'aSMA', 'CD370', 'CD11c', 'CD19', 'ICOS', 
                             'CD56(NCAM)', 'CD3', 'CD14']
-        self.acceptable_markers = ['CD206', 'IL-21', 'CD45', 'CXCL13', 
-                                   'Bcl-6', 'CD45RA', 
-                                   'E-Cadherin', 'CD141', 'CD123', 'CD68', 'CD279(PD-1)', 
-                                   'HLA-DR', 'aSMA', 'CD370', 'CD11c', 'CD19',  
-                                   'CD3', 'CD14']
+        
+        self.acceptable_markers = ['CD370', 'CD19', 'CD45RA', 'HLA-DR', 'IL-21',
+                                   'CXCL13', 'CD206', 'CD279(PD-1)', 'CD45',
+                                   'CD3', 'Bcl-6', 'CD14', 'CD141', 'CD68', 'CD123',
+                                   'CD11c', 'E-Cadherin', 'aSMA']
 
         self.markers = self.acceptable_markers
-        self.nb_clusters = 20
+        self.nb_clusters = 40
         # + CD19 (cellules B), abondant !
         # + E-cadherin (la crypte)
         # + alphasma (vaisseaux sanguins)
@@ -172,14 +172,15 @@ class ClusterAnalysis(object):
         return principalComponents
     
     def subsample(self, X, K):
-        Xsample = resample(X, replace=False, n_samples=K)
-        return Xsample
+        indices = np.arange(X.shape[0])
+        Xsample, ind_sample = resample(X, indices, replace=False, n_samples=K)
+        return Xsample, ind_sample
     
     def tsne(self, X=None, save_fig=True):
         if X is None:
             X = self.get_data()
             X = self.normalize(X)
-            X = self.subsample(X, 1200)
+            X, indices = self.subsample(X, 1200)
 
         tsne = TSNE(n_components=2).fit_transform(X)
         
@@ -205,7 +206,7 @@ class ClusterAnalysis(object):
         if X is None:
             X = self.get_data()
             X = self.normalize(X)
-            Xs = self.subsample(X, 14000)
+            Xs, indices = self.subsample(X, 14000)
         else:
             Xs = X.copy()
                 
@@ -216,24 +217,28 @@ class ClusterAnalysis(object):
             Xs = Xs[:,marker_indices]
 
         columns = markers
-        #object_labels = np.arange(X.shape[0]) + 1
         df = pd.DataFrame(Xs, columns=columns)
 
-        #dist_mat = distance.pdist(Xs, method='euclidean')
-        cluster_res = hierarchy.linkage(Xs, method='ward', metric='euclidean')
-        ct = hierarchy.cut_tree(cluster_res, n_clusters=self.nb_clusters)
+        # color palette for clusters
         col_pal = sns.color_palette("husl", self.nb_clusters)
-        #col_pal = sns.color_palette("bright", n_colors=self.nb_clusters)
+
+        # perform clustering
+        cluster_res = hierarchy.linkage(Xs, method='ward', metric='euclidean')
+
+        # cut the tree
+        ct = hierarchy.cut_tree(cluster_res, n_clusters=self.nb_clusters)
         cluster_assignment = ct.T[0]
         col_vec = np.array(col_pal)[ct.T[0]]
         
-        #cmap = sns.diverging_palette(240, 0, s=90, l=50, sep=80, n=30)
+        # main result
+        res = dict(zip(range(self.nb_clusters), [np.where(cluster_assignment==i) for i in range(self.nb_clusters)]))
+        
         cmap = sns.light_palette("navy", as_cmap=True)
         g = sns.clustermap(df, row_linkage=cluster_res, robust=True, cmap=cmap, 
-                           col_cluster=True, yticklabels=False,
+                           col_cluster=False, yticklabels=False,
                            row_colors=col_vec)
-        #g.ax_col_dendrogram.set_visible(False)
 
+        # legend for class colors
         for label in range(self.nb_clusters):
             g.ax_col_dendrogram.bar(0, 0, color=col_pal[label],
                                     label='%i(%i)' % (label, len(res[label])), 
@@ -244,28 +249,42 @@ class ClusterAnalysis(object):
         g.savefig(os.path.join(self.cluster_folder, 'ward%s.png' % filename_ext))
  
     
-        res = dict(zip(range(self.nb_clusters), [np.where(cluster_assignment==i) for i in range(self.nb_clusters)]))
+        full_res = {'res': res, 'colors': col_pal, 'linkage': cluster_res}
         if export:
             filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % filename_ext)
             fp = open(filename, 'wb')
-            pickle.dump(res, fp)
+            pickle.dump(full_res, fp)
             fp.close()
 
         # save dendrogram
-        fig = plt.figure(figsize=(Xs.shape[0] / 10, 8))
-        dn = hierarchy.dendrogram(cluster_res)
-        plt.savefig(os.path.join(self.cluster_folder, 'dendrogram_ward%s.pdf' % filename_ext))
-        plt.close('all')
+        #fig = plt.figure(figsize=(Xs.shape[0] / 10, 8))
+        #dn = hierarchy.dendrogram(cluster_res)
+        #plt.savefig(os.path.join(self.cluster_folder, 'dendrogram_ward%s.pdf' % filename_ext))
+        #plt.close('all')
                 
-        return res
+        return full_res
     
     def export_cell_cluster_maps(self, cluster_filename):
-        col_pal = sns.color_palette("husl", self.nb_clusters)
         
+        filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % cluster_filename)
+        if not os.path.isfile(filename): 
+            filename = cluster_filename
+            cluster_filename = ''
+        if not os.path.isfile(filename):
+            raise ValueError("A filename or filename extension must be given."
+                             "First, we interpret cluster_filename as a filename extension and look for"
+                             "the corresponding pickle file in %s" % self.cluster_folder)
+
+        clustermaps_folder = os.path.join(self.cluster_folder, 'clustermaps')
+        if not os.path.isdir(clustermaps_folder):
+            os.makedirs(clustermaps_folder)
+
         # import cluster results
-        fp = open(cluster_filename, 'rb')
-        cluster_assignment = pickle.load(fp)
+        fp = open(filename, 'rb')
+        full_res = pickle.load(fp)
         fp.close()
+        cluster_assignment = full_res['res']
+        col_pal = full_res['colors']
         
         # get the individual cells.
         ws = self.cell_detector.get_image(False)
@@ -299,8 +318,10 @@ class ClusterAnalysis(object):
             color_img = 255.0 * color_matrix_rgb[ws]
             color_img[color_img==0] = grey2rgb(region_image)[color_img==0]
             
-            filename = os.path.join(self.cluster_folder, '%s_clusterid_%i_nb_%i.png' % (os.path.sep(cluster_filename)[0], 
-                                                                                        cluster_label, len(labels)))
+            filename = os.path.join(clustermaps_folder,
+                                    'clustermap%s_clusterid_%i_nb_%i.png' % (cluster_filename, 
+                                                                             cluster_label, 
+                                                                             len(labels)))
             print('write %s' % filename)
             skimage.io.imsave(filename, color_img.astype(np.uint8))
             if cluster_label > 3:
@@ -465,10 +486,23 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--tissue_id', dest='tissue_id', required=False,
                         type=str, default=None, 
                         help='Tissue id (optional). If not specificied, the tissue id from the settings file is taken.')
-
     parser.add_argument('--pca', dest='pca', required=False,
                         action='store_true',
                         help='Make PCA.')
+    
+    parser.add_argument('--ward', dest='ward', required=False,
+                        action='store_true',
+                        help='Perform hierarchical clustering (ward).')
+    parser.add_argument('--nb_clusters', dest='nb_clusters', required=False,
+                        type=int, default=40, 
+                        help='Number of clusters')
+    parser.add_argument('--downsample', dest='downsample', required=False,
+                        type=int, default=None, 
+                        help='Downsample: number of samples to draw randomly from the cells.')
+    parser.add_argument('--normalize', dest='normalize', required=False,
+                        type=str, default='percentile', 
+                        help='Normalization to be applied to the average intensity measured on the cell area.'
+                        'Possible values are: minmax, percentile, sigmoid')
 
     args = parser.parse_args()
     
@@ -476,4 +510,24 @@ if __name__ == '__main__':
     if args.pca:
         print(' *** Perform principal component analysis ***')
         pc = ca.pca()
+        
+    if args.ward:
+        print(' *** Perform hierarchical clustering ***')
+        ca.nb_clusters = args.nb_clusters
+        X = ca.get_data()
+        Xnorm = ca.normalize(X, args.normalize)
+        if not args.downsample is None:
+            Xs, indices = ca.subsample(Xnorm, args.downsample)
+        else:
+            Xs = Xnorm
+        filename_ext='_normalization_%s' % args.normalize 
+        print('starting the hierarchical clustering ... ')
+        full_res = ca.hierarchical_clustering(Xs, filename_ext=filename_ext)
+        
+        print('exporting the cluster maps')
+        ca.export_cell_cluster_maps(cluster_filename = filename_ext)
+        print('DONE')
+        
+        
+        
         
