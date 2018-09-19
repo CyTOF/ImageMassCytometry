@@ -259,6 +259,125 @@ class ClusterAnalysis(object):
                 
         return full_res
     
+    def export_cluster_galleries(self, cluster_filename, nb_rows=40, window_size=61):
+
+        filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % cluster_filename)
+        if not os.path.isfile(filename): 
+            filename = cluster_filename
+            cluster_filename = ''
+        if not os.path.isfile(filename):
+            raise ValueError("A filename or filename extension must be given."
+                             "First, we interpret cluster_filename as a filename extension and look for"
+                             "the corresponding pickle file in %s" % self.cluster_folder)
+
+        output_folder = os.path.join(self.cluster_folder, 'clustergalleries')
+        if not os.path.isdir(output_folder):
+            os.makedirs(output_folder)
+
+        # import cluster results
+        fp = open(filename, 'rb')
+        full_res = pickle.load(fp)
+        fp.close()
+        cluster_assignment = full_res['res']
+        col_pal = full_res['colors']
+            
+        nb_rows_max = nb_rows        
+
+        # read label image with cell contours
+        ws = self.cell_detector.get_image(False)
+        ws_color = self.make_random_colors(ws)
+
+        # read image data
+        si = SequenceImporter(self.markers)
+        img, channel_names = si(self.settings.input_folder)
+        nb_channels = len(channel_names)
+        
+        # normalize image data for visualization
+        perc_for_vis = [1, 99]
+        percentiles = np.percentile(image, perc_for_vis, axis=(0,1))
+        image = 255 * (img - percentiles[0]) / (percentiles[1] - percentiles[0])
+
+        # geometry settings
+        if window_size % 2 == 0:
+            window_size = window_size + 1 
+        radius = (window_size - 1) / 2
+        nb_cols = len(channel_names) 
+        nb_samples = nb_rows * nb_cols
+
+        # look over cluster labels
+        for cluster_label in cluster_assignment:
+            
+            labels = np.array(cluster_assignment[cluster_label][0])
+            if not full_res['indices'] is None:
+                labels = full_res['indices'][labels]
+            else:
+                labels = labels + 1
+            
+            if nb_rows > len(labels): 
+                labels_sample = resample(labels, replace=False, n_samples=nb_rows)
+            else:
+                labels_sample = labels
+            
+            nb_rows_adjusted = len(labels)
+            
+            # output image
+            rgb_image = 255 * np.ones((nb_rows_adjusted * window_size, (nb_channels + 1) * window_size, 3))
+
+            # find the centers of the labels                        
+            props = regionprops(ws, image)
+            centers = np.array([props[k]['centroid'] for k in range(len(props))])
+            ws_labels = dict(zip([props[k]['label'] for k in range(len(props))],
+                                 [props[k]['centroid'] for k in range(len(props))]))
+
+                        
+            for t_row, lab in enumerate(labels_sample):
+                row_, col_ = ws_labels[lab]
+                
+                row = np.rint(row_).astype(np.int)
+                col = np.rint(col_).astype(np.int)
+                ws_label = ws[row, col]
+                    
+                y1 = int(max(0, row-radius))
+                y2 = int(min(row+radius, ws.shape[0]))
+                x1 = int(max(0, col-radius))
+                x2 = int(min(col+radius, ws.shape[1]))
+
+                height = np.rint(y2-y1).astype(np.int)
+                width= np.rint(x2-x1).astype(np.int)
+                                        
+                sample_image = image[y1:y2, x1:x2,:]
+                for t_col in range(nb_channels): 
+                    
+                    offset_y = t_row*window_size
+                    offset_x = t_col*window_size
+                    #pdb.set_trace()
+                    rgb_image[offset_y:(offset_y + height),
+                              offset_x:(offset_x + width),
+                              :] = grey2rgb(sample_image[:, :, t_col])
+                    
+                mean_sample_image = np.mean(image, axis=2)
+                offset_x = nb_channels*window_size
+                rgb_image[offset_y:(offset_y + height),
+                          offset_x:(offset_x + width),
+                          :] = grey2rgb(mean_sample_image)
+                
+                mask_img = ws[y1:y2,x1:x2] == ws_label                    
+                mask_img = mask_img.astype(np.uint8)
+                grad_img = dilation(mask_img, disk(1)) - erosion(mask_img, disk(1))
+                grad_img[mask_img==0] = 0
+                indices = np.where(grad_img)
+
+                new_indices = (indices[0] + offset_y, indices[1] + offset_x)
+                rgb_image[new_indices] = (255, 0, 0)
+            
+            
+            filename = os.path.join(output_folder,
+                                    'clustergallery%s_clusterid_%i.png' % (cluster_filename, cluster_label))
+            print('write %s' % filename)
+            skimage.io.imsave(filename, rgb_image.astype(np.uint8))
+
+        return 
+
     def export_cell_cluster_maps(self, cluster_filename):
         
         filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % cluster_filename)
@@ -526,6 +645,10 @@ if __name__ == '__main__':
         
         print('exporting the cluster maps')
         ca.export_cell_cluster_maps(cluster_filename = filename_ext)
+
+        print('exporting the cluster galleries')
+        ca.export_cell_cluster_galleries(cluster_filename = filename_ext)
+
         print('DONE')
         
         
