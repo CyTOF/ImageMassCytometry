@@ -299,7 +299,7 @@ class ClusterAnalysis(object):
         nb_channels = len(channel_names)
         
         # normalize image data for visualization
-        perc_for_vis = [1, 99]
+        perc_for_vis = [1, 99.9]
         percentiles = np.percentile(img, perc_for_vis, axis=(0,1))
         image = 255 * (img.astype(np.float) - percentiles[0]) / (percentiles[1] - percentiles[0])
         image[image>255] = 255
