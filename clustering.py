@@ -639,6 +639,7 @@ if __name__ == '__main__':
             Xs, indices = ca.subsample(Xnorm, args.downsample)
         else:
             Xs = Xnorm
+            indices = None
         filename_ext='_normalization_%s' % args.normalize 
         print('starting the hierarchical clustering ... ')
         full_res = ca.hierarchical_clustering(Xs, filename_ext=filename_ext, indices=indices)
@@ -647,7 +648,7 @@ if __name__ == '__main__':
         ca.export_cell_cluster_maps(cluster_filename = filename_ext)
 
         print('exporting the cluster galleries')
-        ca.export_cell_cluster_galleries(cluster_filename = filename_ext)
+        ca.export_cluster_galleries(cluster_filename = filename_ext)
 
         print('DONE')
         
