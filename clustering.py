@@ -103,7 +103,7 @@ class ClusterAnalysis(object):
     def get_data(self, force=False):
         
         if not force:
-            print('no')
+            print('new calculation not forced ... ')
             
         print('Reading data ... ')
         
@@ -201,15 +201,10 @@ class ClusterAnalysis(object):
         return tsne
         
     def hierarchical_clustering(self, X=None, markers=None, filename_ext='',
-                                export=True):
+                                export=True, indices=None):
+                        
+        Xs = X.copy()
         
-        if X is None:
-            X = self.get_data()
-            X = self.normalize(X)
-            Xs, indices = self.subsample(X, 14000)
-        else:
-            Xs = X.copy()
-                
         if markers is None:
             markers = self.markers
         else:
@@ -241,7 +236,7 @@ class ClusterAnalysis(object):
         # legend for class colors
         for label in range(self.nb_clusters):
             g.ax_col_dendrogram.bar(0, 0, color=col_pal[label],
-                                    label='%i(%i)' % (label, len(res[label])), 
+                                    label='%i(%i)' % (label, len(res[label][0])), 
                                     linewidth=0)
         g.ax_col_dendrogram.legend(loc="center", ncol=5)
 
@@ -249,7 +244,7 @@ class ClusterAnalysis(object):
         g.savefig(os.path.join(self.cluster_folder, 'ward%s.png' % filename_ext))
  
     
-        full_res = {'res': res, 'colors': col_pal, 'linkage': cluster_res}
+        full_res = {'res': res, 'colors': col_pal, 'linkage': cluster_res, 'indices': indices}
         if export:
             filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % filename_ext)
             fp = open(filename, 'wb')
@@ -286,6 +281,8 @@ class ClusterAnalysis(object):
         cluster_assignment = full_res['res']
         col_pal = full_res['colors']
         
+        #full_res = {'res': res, 'colors': col_pal, 'linkage': cluster_res, 'indices': indices}
+        
         # get the individual cells.
         ws = self.cell_detector.get_image(False)
 
@@ -298,10 +295,14 @@ class ClusterAnalysis(object):
         region_image[t_region>0] = 200
         
         for cluster_label in cluster_assignment:
+            
             bin_vec = np.zeros(N + 1, dtype=np.float)
-            labels = np.array(cluster_assignment[cluster_label][0]) + 1
+            labels = np.array(cluster_assignment[cluster_label][0])
+            if not full_res['indices'] is None:
+                labels = full_res['indices'][labels]
+            else:
+                labels = labels + 1
             bin_vec[labels] = 1
-            #bin_vec = bin_vec * np.random.rand(N+1)
 
             color_matrix_hsv = np.array((N + 1) * colorsys.rgb_to_hsv(*col_pal[cluster_label])).reshape((N + 1, 3))         
             noise_vec_l = np.random.rand(N + 1)
@@ -324,8 +325,7 @@ class ClusterAnalysis(object):
                                                                              len(labels)))
             print('write %s' % filename)
             skimage.io.imsave(filename, color_img.astype(np.uint8))
-            if cluster_label > 3:
-                break
+
         return
     
     def make_intensity_density_plot(self, x, y, filename, x_name, y_name, 
@@ -522,7 +522,7 @@ if __name__ == '__main__':
             Xs = Xnorm
         filename_ext='_normalization_%s' % args.normalize 
         print('starting the hierarchical clustering ... ')
-        full_res = ca.hierarchical_clustering(Xs, filename_ext=filename_ext)
+        full_res = ca.hierarchical_clustering(Xs, filename_ext=filename_ext, indices=indices)
         
         print('exporting the cluster maps')
         ca.export_cell_cluster_maps(cluster_filename = filename_ext)
