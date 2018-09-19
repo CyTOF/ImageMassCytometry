@@ -3,6 +3,13 @@ import pickle
 import argparse
 import pdb 
 
+if 'CLUSTER_ENV' in os.environ:
+    import matplotlib
+    matplotlib.use('Agg')
+else:
+    import matplotlib.pyplot as plt
+
+
 # numpy
 import numpy as np 
 
@@ -11,7 +18,6 @@ from scipy.cluster import hierarchy
 
 import pandas as pd 
 
-import matplotlib.pyplot as plt
 
 # seaborn for plotting
 import seaborn as sns
@@ -19,6 +25,7 @@ import seaborn as sns
 # skimage imports
 from skimage.measure import label, regionprops
 from skimage.color import grey2rgb
+from skimage.morphology import dilation, erosion, disk
 import skimage.io 
 
 import colorsys
@@ -259,7 +266,7 @@ class ClusterAnalysis(object):
                 
         return full_res
     
-    def export_cluster_galleries(self, cluster_filename, nb_rows=40, window_size=61):
+    def export_cluster_galleries(self, cluster_filename, nb_rows=100, window_size=61):
 
         filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % cluster_filename)
         if not os.path.isfile(filename): 
@@ -285,7 +292,6 @@ class ClusterAnalysis(object):
 
         # read label image with cell contours
         ws = self.cell_detector.get_image(False)
-        ws_color = self.make_random_colors(ws)
 
         # read image data
         si = SequenceImporter(self.markers)
@@ -294,15 +300,24 @@ class ClusterAnalysis(object):
         
         # normalize image data for visualization
         perc_for_vis = [1, 99]
-        percentiles = np.percentile(image, perc_for_vis, axis=(0,1))
-        image = 255 * (img - percentiles[0]) / (percentiles[1] - percentiles[0])
-
+        percentiles = np.percentile(img, perc_for_vis, axis=(0,1))
+        image = 255 * (img.astype(np.float) - percentiles[0]) / (percentiles[1] - percentiles[0])
+        image[image>255] = 255
+        image[image<0] = 0
+        image = image.astype(np.uint8)
+        
         # geometry settings
         if window_size % 2 == 0:
             window_size = window_size + 1 
         radius = (window_size - 1) / 2
         nb_cols = len(channel_names) 
         nb_samples = nb_rows * nb_cols
+
+        # find the centers of the labels
+        props = regionprops(ws, image[:,:,0])
+        centers = np.array([props[k]['centroid'] for k in range(len(props))])
+        ws_labels = dict(zip([props[k]['label'] for k in range(len(props))],
+                             [props[k]['centroid'] for k in range(len(props))]))
 
         # look over cluster labels
         for cluster_label in cluster_assignment:
@@ -312,22 +327,16 @@ class ClusterAnalysis(object):
                 labels = full_res['indices'][labels]
             else:
                 labels = labels + 1
-            
-            if nb_rows > len(labels): 
+
+            if nb_rows < len(labels): 
                 labels_sample = resample(labels, replace=False, n_samples=nb_rows)
             else:
                 labels_sample = labels
             
-            nb_rows_adjusted = len(labels)
+            nb_rows_adjusted = len(labels_sample)
             
             # output image
             rgb_image = 255 * np.ones((nb_rows_adjusted * window_size, (nb_channels + 1) * window_size, 3))
-
-            # find the centers of the labels                        
-            props = regionprops(ws, image)
-            centers = np.array([props[k]['centroid'] for k in range(len(props))])
-            ws_labels = dict(zip([props[k]['label'] for k in range(len(props))],
-                                 [props[k]['centroid'] for k in range(len(props))]))
 
                         
             for t_row, lab in enumerate(labels_sample):
@@ -355,7 +364,8 @@ class ClusterAnalysis(object):
                               offset_x:(offset_x + width),
                               :] = grey2rgb(sample_image[:, :, t_col])
                     
-                mean_sample_image = np.mean(image, axis=2)
+                
+                mean_sample_image = np.mean(sample_image, axis=2)
                 offset_x = nb_channels*window_size
                 rgb_image[offset_y:(offset_y + height),
                           offset_x:(offset_x + width),
@@ -608,7 +618,7 @@ if __name__ == '__main__':
     parser.add_argument('--pca', dest='pca', required=False,
                         action='store_true',
                         help='Make PCA.')
-    
+
     parser.add_argument('--ward', dest='ward', required=False,
                         action='store_true',
                         help='Perform hierarchical clustering (ward).')
