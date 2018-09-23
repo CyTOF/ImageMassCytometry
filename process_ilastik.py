@@ -132,7 +132,6 @@ class Ilastik(object):
 
         si = SequenceImporter(['CD3', 'CD19', 'E-Cadherin'])
         img, channel_names = si(self.settings.input_folder)
-        pdb.set_trace()
         img_downscale = rescale(img, .25)
         rgb_image = np.zeros((img_downscale.shape[0], img_downscale.shape[1], 3), dtype=np.float64)
         for i in range(img.shape[2]):

@@ -2095,6 +2095,74 @@ class ParameterSetup(DistanceAnalyzer):
             
         return
 
+    def plot_threshold_curve(self, plot_histograms=True):
+        out_folder = os.path.join(self.settings.output_folder, 'plots', 'threshold_curve')
+        if not os.path.isdir(out_folder):
+            print('making %s' % out_folder)
+            os.makedirs(out_folder)
+ 
+        si = SequenceImporter()
+        img, channel_names = si(self.settings.input_folder)
+         
+        percentiles = [20, 40, 60, 80, 90, 95, 99, 99.9, 100]
+        for index in channel_names:
+            channel_name = channel_names[index]
+            image = img[:,:,i]
+            thresholds = np.percentile(image, percentiles)
+            for thresh in thresholds:
+                imbin = image>thresh
+                imlabel = label(imbin, neighbors=4)
+#                 
+#              
+#             props = regionprops(ws, image)
+#             areas = [props[k]['area'] for k in range(len(props))]
+#             intensities = [props[k]['mean_intensities'] for k in range(len(props))]
+#              
+#                 intensities[channel_name] = np.array([props[k]['mean_intensity'] for k in range(len(props))])
+#  
+#                 props_rand = regionprops(ws, image_randomized)
+#                 intensities_random = np.array([props_rand[k]['mean_intensity'] 
+#                                                for k in range(len(props_rand))])
+#                 additional_stats[channel_name] = {
+#                     'mean': np.mean(intensities_random), 
+#                     'std': np.std(intensities_random),
+#                     'median': np.median(intensities_random)
+#                     }
+#                 print('plotting intensities for %s %s' % (method, channel_name))
+#                 if plot_histograms:
+#                     self.plot_intensity_histogram(intensities[channel_name], 
+#                                                   intensities_random,
+#                                                   channel_name,
+#                                                   filename_addon=method)
+#                 self.plot_intensity_pixel_noise(intensities[channel_name],
+#                                                 image, channel_name)
+#              
+#             if scatter_plots:
+#                 for i in range(len(channel_names) - 1):
+#                     for j in range(i+1, len(channel_names)):
+#                         filename = os.path.join(out_folder, 'intensity_distribution_population%i_%s_%s_%s_scatterplot.png' % 
+#                                                 (population, channel_names[i], channel_names[j], filename_addon))
+#                         print('generating ... %s' % filename)
+#                         self.make_intensity_scatter_plot(intensities[channel_names[i]], 
+#                                                          intensities[channel_names[j]], 
+#                                                          filename, channel_names[i], channel_names[j],
+#                                                          plot_grid=True, plot_lines=True)#,
+#                                                          #additional_stats=additional_stats)
+#      
+#      
+#                         filename = os.path.join(out_folder, 'intensity_distribution_population%i_%s_%s_%s_density.png' % 
+#                                                 (population, channel_names[i], channel_names[j], filename_addon))
+#                         print('generating ... %s' % filename)
+#                         self.make_intensity_density_plot(intensities[channel_names[i]], 
+#                                                          intensities[channel_names[j]], 
+#                                                          filename, channel_names[i], channel_names[j], 
+#                                                          plot_grid=True, plot_lines=False)#,
+#                                                          #additional_stats=additional_stats)
+#                     #raise ValueError('finished log')
+                 
+             
+        return
+
     def _analyze_all_populations(self, method='spot_detection'):
         res = {}
         for population in range(1,5):

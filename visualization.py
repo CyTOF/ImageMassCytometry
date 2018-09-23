@@ -10,6 +10,15 @@ from skimage.morphology import erosion, disk
 from settings import Settings, overwrite_settings
 from sequence_importer import SequenceImporter
 
+def make_random_colors(ws):
+    max_label = ws.max()
+    colvec = 255 * np.random.rand(max_label+1,3)
+    colvec[0] = np.zeros(3)
+    colvec = colvec.astype(np.uint8)
+    
+    output = colvec[ws]
+    return output
+
 class QuickView(object):
     def __init__(self, settings_filename=None, settings=None, 
                  tissue_id=None):
@@ -29,7 +38,7 @@ class QuickView(object):
         for folder in self.settings.makefolders:
             if not os.path.exists(folder):
                 os.makedirs(folder)
-
+    
     def normalize_images(self):
         si = SequenceImporter()
         img, channel_names = si(self.settings.input_folder)
