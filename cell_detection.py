@@ -812,6 +812,9 @@ if __name__ == '__main__':
     parser.add_argument('--test_segmentation', dest='test_segmentation', required=False,
                         action='store_true',
                         help='This is for testing segmentation.')
+    parser.add_argument('--make_segmentation', dest='make_segmentation', required=False,
+                        action='store_true',
+                        help='Performs segmentation.')
 
     args = parser.parse_args()
     
@@ -821,5 +824,10 @@ if __name__ == '__main__':
         cd.projection()
         
     if args.test_segmentation:
-        print(' *** Perform projection of membrane proteines ***')
+        print(' *** Segmentation test ***')
         cd.test_segmentation()
+
+    if args.make_segmentation:
+        print(" *** Make segmentation *** ")
+        image = cd()
+        cd.write_image(image)

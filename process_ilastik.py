@@ -44,9 +44,9 @@ class Ilastik(object):
             img = img[:nb_rows,:]
         if img.shape[1] > nb_cols:
             img = img[:,:nb_cols]
-        delta_rows = (img.shape[0] - nb_rows) // 2
-        delta_cols = (img.shape[1] - nb_cols) // 2
-        imout[delta_rows:,delta_cols:] = img
+        delta_rows = (nb_rows - img.shape[0]) // 2
+        delta_cols = (nb_cols - img.shape[1]) // 2
+        imout[delta_rows:(delta_rows + img.shape[0]),delta_cols:(delta_cols + img.shape[1])] = img
         return imout
     
     def read_region_images(self):
