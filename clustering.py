@@ -275,7 +275,7 @@ class ClusterAnalysis(object):
         g.ax_col_dendrogram.set_position([dendro_col.x0, dendro_col.y0, dendro_col.width, new_height])
         
         print('saving figure ... ')
-        g.savefig(os.path.join(self.cluster_folder, 'ward%s.png' % filename_ext))
+        g.savefig(os.path.join(self.cluster_folder, 'clustering%s.png' % filename_ext))
 
         full_res = {'res': res, 'colors': col_pal, 'linkage': cluster_res, 'indices': indices}
         if export and not load_clustering:
@@ -509,7 +509,7 @@ class ClusterAnalysis(object):
 
         return
     
-    
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser( \
