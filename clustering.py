@@ -102,8 +102,8 @@ class ClusterAnalysis(object):
                                    'CD68', 'CD206', 'CD370', 'CD141', 'CD123']
         
 
-        self.markers = self.acceptable_markers
-        self.nb_clusters = 40
+        self.markers = self.settings.cluster_markers[self.settings.dataset]
+        self.nb_clusters = 60
         # + CD19 (cellules B), abondant !
         # + E-cadherin (la crypte)
         # + alphasma (vaisseaux sanguins)

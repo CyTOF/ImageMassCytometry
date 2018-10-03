@@ -32,6 +32,24 @@ thresh_alpha = 1.2
 
 prefilter_asf_sizes = [1, 2, 4, 8]
 
+cluster_markers = {
+    'Tonsil_D1': ['E-Cadherin', 'aSMA', 'CD45', 'IL-21',                   
+                  'CXCL13', 'CD279(PD-1)', 'CD3', 'CD45RA',                   
+                  'Bcl-6', 'CD19', 'HLA-DR', 'CD11c', 'CD14',
+                  'CD68', 'CD206', 'CD370', 'CD141', 'CD123'],
+    'Tonsil_D2': ['E-Cadherin', 'aSMA', 'CD45', 'IL-21',                   
+                  'CXCL13', 'CD279(PD-1)', 'CD3', 'CD45RA',                   
+                  'Bcl-6', 'CD19', 'HLA-DR', 'CD11c', 'CD14',
+                  'CD68', 'CD206', 'CD370', 'CD141', 'CD123'],
+    'Tonsil_120628_D1-2A_4MAY2017_1': ['E-Cadherin', 'AlphaSMA', 'CD45', 'IL21', 'CXCL13',
+                                       'PD1', 'CD3', 'CD45RA', 'Bcl6', 'CD19', 'CD11c',
+                                       'CD14', 'Bcl2', 'CD8a', 'FoxP3', 'KI67'],
+    'Tonsil_120828_D18-2A_5MAY2017_1': ['E-Cadherin', 'AlphaSMA', 'CD45', 'IL21', 'CXCL13',
+                                        'PD1', 'CD3', 'CD45RA', 'Bcl6', 'CD19', 'CD11c',
+                                        'CD14', 'Bcl2', 'CD8a', 'FoxP3', 'KI67'],
+}
+
+
 populations = {
     'Tonsil_D1': {
         'Tfh' : ['Bcl-6', 'CD279(PD-1)', 'CD3'],
