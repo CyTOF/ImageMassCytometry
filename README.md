@@ -1,6 +1,6 @@
-# ImageProteomics
+# Imaging Mass Cytometry 
 
-Tools to analyze image mass spectrometry data.
+Tools to analyze imaging mass cytometry data.
 These software tools have been developed in a collaboration between Thomas Walter and Elodie Segura. 
 
 ## Preparation of data for processing
