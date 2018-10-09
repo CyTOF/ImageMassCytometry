@@ -35,6 +35,43 @@ thresh_alpha = 1.2
 
 prefilter_asf_sizes = [1, 2, 4, 8]
 
+
+cluster_fusion = {
+'Tonsil_D1': {'Macrophage' : [4, 9, 14, 34],
+              'Crypt_epithelial_cells' : [1, 5, 52, 36, 37, 44, 50, 52],
+              'B_cells' : [12, 29, 31, 33, 40, 43],
+              'B_cells_Tfh' : [18, 41], 
+              'B_cells_FDC': [10, 11, 16, 17],
+              'Tfh' : [13, 19], 
+              'T_cells_other' : [20, 21, 26, 30, 35],
+              'DC1' : [22, 48],
+              'pDC' : [23], 
+              'Blood_vessels' : [24, 38, 39, 47, 28],
+              'CD14-_CD206+_cells' : [8],
+              },
+'Tonsil_D2':  {'Macrophage' : [30, 41, 22],
+              'Crypt_epithelial_cells' : [6, 16, 33, 34 ],
+              'B_cells' : [8, 12, 13, 14, 15, 29],
+              'B_cells_Tfh' : [11], 
+              'B_cells_FDC': [0, 45],
+              'Tfh' : [10, 19, 32], 
+              'T_cells_other' : [1, 17, 31, 28],
+              'DC1' : [35],
+              'pDC' : [42, 43], 
+              'Blood_vessels' : [20, 23, 25, 26, 37, 38, 44, 59, 18],
+              'CD14-_CD206+_cells' : [2],
+              },
+'Tonsil_120828_D18-2A_5MAY2017_1': {'Macrophage' : [35, 36, 42],
+                                    'Crypt_epithelial_cells' : [15, 22, 27, 54, 55],
+                                    'B_cells' : [13, 18, 21, 28, 31, 32, 39],
+                                    'B_cells_Tfh' : [26],                                     
+                                    'Tfh' : [38, 45, 51, 52], 
+                                    'T_cells_other' : [1, 3, 4, 5, 6, 7, 8, 10, 12, 14, 19, 20, 23, 24],
+                                    'Blood_vessels' : [2, 16, 25, 30, 37, 43, 44],
+                                    },
+}
+
+
 cluster_markers = {
     'Tonsil_D1': ['E-Cadherin', 'aSMA', 'CD45', 'IL-21',                   
                   'CXCL13', 'CD279(PD-1)', 'CD3', 'CD45RA',                   

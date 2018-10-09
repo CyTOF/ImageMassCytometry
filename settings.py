@@ -6,19 +6,26 @@ def overwrite_settings(settings, dataset):
     settings.dataset = dataset
     settings.input_folder = os.path.join(base_folder, 'new_data', dataset)
     settings.output_folder = os.path.join(base_folder, 'results', dataset)
+    settings.debug_folder = os.path.join(base_folder, 'debug')
+    settings.plot_folder = os.path.join(settings.output_folder, 'plots')
 
     # ilastik folder settings
     settings.ilastik_input_folder = os.path.join(base_folder, 'Ilastik', 'channels', dataset)
+    settings.ilastik_input_folder = os.path.join(base_folder, 'Ilastik', 'channels', dataset)
     settings.ilastik_input_rgb_filename = os.path.join(settings.ilastik_input_rgb_folder, 
                                                        'rgb_%s.tif' % dataset)
+    settings.ilastik_folder = os.path.join(base_folder, 'Ilastik', 'data','rgb')
 
     settings.ilastik_filename = os.path.join(settings.ilastik_folder, 
                                              'rgb_%s_Simple Segmentation.png' % dataset)
-    ilastik_backup_filename = os.path.join(settings.ilastik_folder, 
+    settings.ilastik_backup_filename = os.path.join(settings.ilastik_folder, 
                                            'rgb_%s_Simple Segmentation_backup.png' % dataset)
     settings.downsample_image = os.path.join(settings.ilastik_folder, 
                                              'rgb_%s.tif' % dataset)
-
+    
+    settings.makefolders = [settings.output_folder, 
+                            settings.debug_folder, 
+                            settings.plot_folder]
     return settings
 
 class Settings(object):

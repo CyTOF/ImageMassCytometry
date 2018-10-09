@@ -81,6 +81,14 @@ class Ilastik(object):
         
         return background, bcell, tcell
     
+    def export_empty_cluster_map(self, filename):
+        background, b_region, t_region = self.read_region_images()
+        region_image = np.zeros(b_region.shape, dtype=np.uint8)
+        region_image[b_region>0] = 100
+        region_image[t_region>0] = 200
+        skimage.io.imsave(filename, region_image)
+        return
+
     # DEPRECATED
     # postprocessing is done during reading (see function above).
     def _post_filter(self):
@@ -186,6 +194,9 @@ if __name__ == '__main__':
     parser.add_argument('--save_overlay', dest='save_overlay', required=False,
                         action='store_true',
                         help='To save the overlay of B-region and T-region on top of the image.')
+    parser.add_argument('--export_empty_cluster_map', dest='export_empty_cluster_map', required=False,
+                        type=str, default=None,
+                        help='filename for and empty clustermap')
 
     args = parser.parse_args()
     il = Ilastik(args.settings_file, tissue_id=args.tissue_id)
@@ -201,6 +212,10 @@ if __name__ == '__main__':
     if args.save_overlay:
         print(' *** Saving overlay to ***')
         il.save_overlay()
+
+    if not args.export_empty_cluster_map is None:
+        print(' *** Exporting empty cluster map ***')
+        il.export_empty_cluster_map(args.export_empty_cluster_map)
         
 
     

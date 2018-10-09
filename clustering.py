@@ -436,11 +436,21 @@ class ClusterAnalysis(object):
                 offset_x = t_col*window_size + 0.02 * window_size
                 plt.text(offset_x, offset_y, title_row[t_col], 
                          color='orange', fontsize=2)
+            for t_row, lab in enumerate(labels_sample):
+                row_, col_ = ws_labels[lab]
+                
+                row = np.rint(row_).astype(np.int)
+                col = np.rint(col_).astype(np.int)
+                ws_label = ws[row, col]
+
+                plt.text(2, (t_row + .5) * window_size, '%i' % ws_label, rotation=90,
+                         fontsize=2, color='orange')
             fig.savefig(filename, dpi=my_dpi)
 
         return 
 
-    def export_cell_cluster_maps(self, cluster_filename):
+
+    def export_cell_cluster_maps(self, cluster_filename, cluster_fusion=False):
         
         filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % cluster_filename)
         if not os.path.isfile(filename): 
@@ -451,7 +461,10 @@ class ClusterAnalysis(object):
                              "First, we interpret cluster_filename as a filename extension and look for"
                              "the corresponding pickle file in %s" % self.cluster_folder)
 
-        clustermaps_folder = os.path.join(self.cluster_folder, 'clustermaps')
+        if cluster_fusion:
+            clustermaps_folder = os.path.join(self.cluster_folder, 'clusterfusion')
+        else:
+            clustermaps_folder = os.path.join(self.cluster_folder, 'clustermaps')
         if not os.path.isdir(clustermaps_folder):
             os.makedirs(clustermaps_folder)
 
@@ -475,6 +488,18 @@ class ClusterAnalysis(object):
         region_image[b_region>0] = 100
         region_image[t_region>0] = 200
         
+        if cluster_fusion:
+            if not full_res['indices'] is None:
+                raise ValueError('It is not possible to make cluster fusions and downsampling.')
+            fused_clusters = {}
+            fusion_info = self.settings.cluster_fusion[self.settings.dataset]
+            cluster_names = list(fusion_info.keys())
+            for k, population_name in enumerate(cluster_names):
+                fused_clusters[k] = (np.hstack([cluster_assignment[i][0] for i in fusion_info[population_name]]),)
+            col_pal = sns.color_palette("husl", len(fusion_info))
+            cluster_assignment = fused_clusters
+
+        color_acc = None
         for cluster_label in cluster_assignment:
             
             bin_vec = np.zeros(N + 1, dtype=np.float)
@@ -498,15 +523,34 @@ class ClusterAnalysis(object):
             color_matrix_rgb = (bin_vec * color_matrix_rgb.T).T
 
             color_img = 255.0 * color_matrix_rgb[ws]
+            if color_acc is None:
+                color_acc = color_img.copy()
+            else:
+                color_acc += color_img                
             color_img[color_img==0] = grey2rgb(region_image)[color_img==0]
-            
-            filename = os.path.join(clustermaps_folder,
-                                    'clustermap%s_clusterid_%i_nb_%i.png' % (cluster_filename, 
-                                                                             cluster_label, 
-                                                                             len(labels)))
+
+            if cluster_fusion:
+                filename = os.path.join(clustermaps_folder,
+                                            'clustermap%s_clusterid_%s_nb_%i.png' % (cluster_filename, 
+                                                                                     cluster_names[cluster_label], 
+                                                                                     len(labels)))
+            else:
+                filename = os.path.join(clustermaps_folder,
+                                        'clustermap%s_clusterid_%i_nb_%i.png' % (cluster_filename, 
+                                                                                 cluster_label, 
+                                                                                 len(labels)))
             print('write %s' % filename)
             skimage.io.imsave(filename, color_img.astype(np.uint8))
 
+        # todo : write final map.        
+        color_acc[color_acc==0] = grey2rgb(region_image)[color_acc==0]
+        if cluster_fusion:
+            filename = os.path.join(clustermaps_folder, 'clustermap_all_fused_clusters.png')
+        else:
+            filename = os.path.join(clustermaps_folder, 'clustermap_all_clusters.png')
+        print('write %s' % filename)
+        skimage.io.imsave(filename, color_acc.astype(np.uint8))    
+    
         return
     
 
@@ -556,6 +600,9 @@ if __name__ == '__main__':
     parser.add_argument('--cluster_maps', dest='cluster_maps', required=False,
                         action='store_true',
                         help='Make maps of cells in the clusters.')
+    parser.add_argument('--cluster_fusion', dest='cluster_fusion', required=False,
+                        action='store_true',
+                        help='Performs cluster fusion (according to settings in the settings file)')
 
 
     args = parser.parse_args()
@@ -585,11 +632,14 @@ if __name__ == '__main__':
         
     if args.cluster_maps:
         print('exporting the cluster maps')
-        ca.export_cell_cluster_maps(cluster_filename = filename_ext)
+        cluster_fusion = False
+        if args.cluster_fusion:
+            cluster_fusion = True
+        ca.export_cell_cluster_maps(cluster_filename=filename_ext, cluster_fusion=cluster_fusion)
 
     if args.cluster_galleries:
         print('exporting the cluster galleries')
-        ca.export_cluster_galleries(cluster_filename = filename_ext)
+        ca.export_cluster_galleries(cluster_filename=filename_ext, nb_rows=40)
         
     print('DONE')
         
