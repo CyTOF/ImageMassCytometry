@@ -35,6 +35,7 @@ class FissureDetection(object):
 
         for folder in self.settings.makefolders:
             if not os.path.exists(folder):
+                print('making folder %s' % folder)
                 os.makedirs(folder)
 
         self.image_result_folder = os.path.join(self.settings.output_folder, 
@@ -102,6 +103,7 @@ class FissureDetection(object):
             return output
         
         image = np.mean(img, axis=2)
+        pdb.set_trace()
         if downscale:
             image_downscale = rescale(image, .25)
         else:
@@ -121,14 +123,21 @@ class FissureDetection(object):
 
         thresh = threshold_isodata(pref2)
         binary = pref2 > thresh
+        print(np.sum(binary))
         binary_closed = closing(binary, square(8))
         clean_binary = remove_small_objects(binary_closed, 30)
+        print(np.sum(binary_closed))
+
         temp = dilation(clean_binary, disk(2))
         output_downscale = closing(temp, square(15))
+        print(np.sum(output_downscale))
+
         if downscale:
             output = rescale(output_downscale, 4)
         else:
             output = output_downscale
+
+        print(np.sum(output))
 
         return output
 
