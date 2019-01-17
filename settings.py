@@ -3,22 +3,26 @@ import os, sys, time, re
 def overwrite_settings(settings, dataset):
     base_folder = settings.base_folder 
     
+    old_dataset = settings.dataset
     settings.dataset = dataset
-    settings.input_folder = os.path.join(base_folder, 'new_data', dataset)
-    settings.output_folder = os.path.join(base_folder, 'results', dataset)
+    settings.input_folder = settings.input_folder.replace(old_dataset, dataset) #os.path.join(base_folder, 'new_data', dataset)
+    settings.output_folder = settings.output_folder.replace(old_dataset, dataset) #os.path.join(base_folder, 'results', dataset)
+    settings.debug_folder = settings.debug_folder.replace(old_dataset, dataset) #os.path.join(base_folder, 'debug')
+    settings.plot_folder = settings.plot_folder.replace(old_dataset, dataset) #os.path.join(settings.output_folder, 'plots')
 
     # ilastik folder settings
-    settings.ilastik_input_folder = os.path.join(base_folder, 'Ilastik', 'channels', dataset)
-    settings.ilastik_input_rgb_filename = os.path.join(settings.ilastik_input_rgb_folder, 
-                                                       'rgb_%s.tif' % dataset)
+    settings.ilastik_input_folder = settings.ilastik_input_folder.replace(old_dataset, dataset)
+    settings.ilastik_input_rgb_folder = settings.ilastik_input_rgb_folder.replace(old_dataset, dataset)   
+    settings.ilastik_input_rgb_filename = settings.ilastik_input_rgb_filename.replace(old_dataset, dataset)
+    settings.ilastik_folder = settings.ilastik_folder.replace(old_dataset, dataset)
 
-    settings.ilastik_filename = os.path.join(settings.ilastik_folder, 
-                                             'rgb_%s_Simple Segmentation.png' % dataset)
-    ilastik_backup_filename = os.path.join(settings.ilastik_folder, 
-                                           'rgb_%s_Simple Segmentation_backup.png' % dataset)
-    settings.downsample_image = os.path.join(settings.ilastik_folder, 
-                                             'rgb_%s.tif' % dataset)
-
+    settings.ilastik_filename = settings.ilastik_filename.replace(old_dataset, dataset)
+    settings.ilastik_backup_filename = settings.ilastik_backup_filename.replace(old_dataset, dataset)
+    settings.downsample_image = settings.downsample_image.replace(old_dataset, dataset)
+    
+    settings.makefolders = [settings.output_folder, 
+                            settings.debug_folder, 
+                            settings.plot_folder]
     return settings
 
 class Settings(object):

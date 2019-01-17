@@ -210,7 +210,7 @@ class ClusterAnalysis(object):
         
     def hierarchical_clustering(self, X=None, markers=None, filename_ext='',
                                 export=True, indices=None, load_clustering=False,
-                                method='ward', distance='euclidean'):
+                                method='ward', distance='euclidean', cluster_fusion=False):
                         
         Xs = X.copy()
         
@@ -237,15 +237,34 @@ class ClusterAnalysis(object):
             fp.close()
             cluster_res = full_res['linkage']
 
-            
         # cut the tree
         ct = hierarchy.cut_tree(cluster_res, n_clusters=self.nb_clusters)
         cluster_assignment = ct.T[0]
         col_vec = np.array(col_pal)[ct.T[0]]
-        
+
         # main result
         res = dict(zip(range(self.nb_clusters), [np.where(cluster_assignment==i) for i in range(self.nb_clusters)]))
-        
+
+        if cluster_fusion:
+            if not full_res['indices'] is None:
+                raise ValueError('It is not possible to make cluster fusions and downsampling.')
+            fused_clusters = {}
+            fusion_info = self.settings.cluster_fusion[self.settings.dataset]
+            cluster_names = list(fusion_info.keys())
+            
+            fused_cluster_assignment_indices = np.zeros(self.nb_clusters, dtype=np.uint8) + len(cluster_names)
+            for k, population_name in enumerate(cluster_names):
+                fused_clusters[k] = (np.hstack([res[i][0] for i in fusion_info[population_name]]),)
+                fused_cluster_assignment_indices[fusion_info[population_name]] = k
+            
+            cluster_assignment = fused_cluster_assignment_indices[cluster_assignment]
+            col_pal = sns.color_palette("husl", len(fusion_info)) + [(1,1,1)]  
+            col_vec = np.array(col_pal)[cluster_assignment]
+            res = fused_clusters
+            res[len(cluster_names)] = np.where(cluster_assignment==len(cluster_names))
+            filename_ext = '%s_cluster_fusion' % filename_ext
+            
+
         cmap = sns.light_palette("navy", as_cmap=True)
         
         print('starting clustering/heatmap generation ... ')
@@ -256,22 +275,35 @@ class ClusterAnalysis(object):
 
         print('starting legend ... ')
         indices_ordered = g.dendrogram_row.reordered_ind
-        cluster_label_vec = ct.T[0]
-        ordered_cluster_labels = cluster_label_vec[indices_ordered]
+        ordered_cluster_labels = cluster_assignment[indices_ordered]
         cluster_order = list(dict.fromkeys(ordered_cluster_labels))
 
         # legend for class colors
         for label in cluster_order: #range(self.nb_clusters):
-            g.ax_col_dendrogram.bar(0, 0, color=col_pal[label],
-                                    label='%i(%i)' % (label, len(res[label][0])), 
-                                    linewidth=0)
-        lgd = g.ax_col_dendrogram.legend(loc="center", ncol=5)
+            if not cluster_fusion:
+                g.ax_col_dendrogram.bar(0, 0, color=col_pal[label],
+                                        label='%i(%i)' % (label, len(res[label][0])), 
+                                        linewidth=0)
+            else:
+                if label < len(cluster_names):
+                    cluster_name = cluster_names[label]
+                else:
+                    cluster_name = 'not assigned'
+                g.ax_col_dendrogram.bar(0, 0, color=col_pal[label],
+                                        label='%s(%i)' % (cluster_name, len(res[label][0])), 
+                                        linewidth=0)
+        if cluster_fusion:
+            legend_ncol = 3
+        else:
+            legend_ncol = 5
+
+        lgd = g.ax_col_dendrogram.legend(loc="center", ncol=legend_ncol)
 
         # to avoid and overlap of this HUGE legend with the heatmap. 
         dendro_col = g.ax_col_dendrogram.get_position()
         standard_height = 0.18
         #new_height = max(dendro_col.height / 4.0 * (self.nb_clusters // 5) - dendro_col.height, dendro_col.height)
-        new_height = max(standard_height / 4.0 * (self.nb_clusters // 5) - standard_height, standard_height)        
+        new_height = max(standard_height / 4.0 * (len(res) // legend_ncol) - standard_height, standard_height)        
         g.ax_col_dendrogram.set_position([dendro_col.x0, dendro_col.y0, dendro_col.width, new_height])
         
         print('saving figure ... ')
@@ -436,11 +468,21 @@ class ClusterAnalysis(object):
                 offset_x = t_col*window_size + 0.02 * window_size
                 plt.text(offset_x, offset_y, title_row[t_col], 
                          color='orange', fontsize=2)
+            for t_row, lab in enumerate(labels_sample):
+                row_, col_ = ws_labels[lab]
+                
+                row = np.rint(row_).astype(np.int)
+                col = np.rint(col_).astype(np.int)
+                ws_label = ws[row, col]
+
+                plt.text(2, (t_row + .5) * window_size, '%i' % ws_label, rotation=90,
+                         fontsize=2, color='orange')
             fig.savefig(filename, dpi=my_dpi)
 
         return 
 
-    def export_cell_cluster_maps(self, cluster_filename):
+
+    def export_cell_cluster_maps(self, cluster_filename, cluster_fusion=False):
         
         filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % cluster_filename)
         if not os.path.isfile(filename): 
@@ -451,7 +493,10 @@ class ClusterAnalysis(object):
                              "First, we interpret cluster_filename as a filename extension and look for"
                              "the corresponding pickle file in %s" % self.cluster_folder)
 
-        clustermaps_folder = os.path.join(self.cluster_folder, 'clustermaps')
+        if cluster_fusion:
+            clustermaps_folder = os.path.join(self.cluster_folder, 'clusterfusion')
+        else:
+            clustermaps_folder = os.path.join(self.cluster_folder, 'clustermaps')
         if not os.path.isdir(clustermaps_folder):
             os.makedirs(clustermaps_folder)
 
@@ -475,6 +520,20 @@ class ClusterAnalysis(object):
         region_image[b_region>0] = 100
         region_image[t_region>0] = 200
         
+        if cluster_fusion:
+            if not full_res['indices'] is None:
+                raise ValueError('It is not possible to make cluster fusions and downsampling.')
+            fused_clusters = {}
+            fusion_info = self.settings.cluster_fusion[self.settings.dataset]
+            cluster_names = list(fusion_info.keys())
+            for k, population_name in enumerate(cluster_names):
+                fused_clusters[k] = (np.hstack([cluster_assignment[i][0] for i in fusion_info[population_name]]),)
+            col_pal = sns.color_palette("husl", len(fusion_info))
+            cluster_assignment = fused_clusters
+
+            cluster_res = full_res['linkage']
+
+        color_acc = None
         for cluster_label in cluster_assignment:
             
             bin_vec = np.zeros(N + 1, dtype=np.float)
@@ -498,15 +557,34 @@ class ClusterAnalysis(object):
             color_matrix_rgb = (bin_vec * color_matrix_rgb.T).T
 
             color_img = 255.0 * color_matrix_rgb[ws]
+            if color_acc is None:
+                color_acc = color_img.copy()
+            else:
+                color_acc += color_img                
             color_img[color_img==0] = grey2rgb(region_image)[color_img==0]
-            
-            filename = os.path.join(clustermaps_folder,
-                                    'clustermap%s_clusterid_%i_nb_%i.png' % (cluster_filename, 
-                                                                             cluster_label, 
-                                                                             len(labels)))
+
+            if cluster_fusion:
+                filename = os.path.join(clustermaps_folder,
+                                            'clustermap%s_clusterid_%s_nb_%i.png' % (cluster_filename, 
+                                                                                     cluster_names[cluster_label], 
+                                                                                     len(labels)))
+            else:
+                filename = os.path.join(clustermaps_folder,
+                                        'clustermap%s_clusterid_%i_nb_%i.png' % (cluster_filename, 
+                                                                                 cluster_label, 
+                                                                                 len(labels)))
             print('write %s' % filename)
             skimage.io.imsave(filename, color_img.astype(np.uint8))
 
+        # todo : write final map.        
+        color_acc[color_acc==0] = grey2rgb(region_image)[color_acc==0]
+        if cluster_fusion:
+            filename = os.path.join(clustermaps_folder, 'clustermap_all_fused_clusters.png')
+        else:
+            filename = os.path.join(clustermaps_folder, 'clustermap_all_clusters.png')
+        print('write %s' % filename)
+        skimage.io.imsave(filename, color_acc.astype(np.uint8))    
+    
         return
     
 
@@ -534,7 +612,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help='Indicates whether to load the clustering result rather than performing clustering.')
     parser.add_argument('--nb_clusters', dest='nb_clusters', required=False,
-                        type=int, default=40, 
+                        type=int, default=60, 
                         help='Number of clusters')
     parser.add_argument('--downsample', dest='downsample', required=False,
                         type=int, default=None, 
@@ -556,6 +634,9 @@ if __name__ == '__main__':
     parser.add_argument('--cluster_maps', dest='cluster_maps', required=False,
                         action='store_true',
                         help='Make maps of cells in the clusters.')
+    parser.add_argument('--cluster_fusion', dest='cluster_fusion', required=False,
+                        action='store_true',
+                        help='Performs cluster fusion (according to settings in the settings file)')
 
 
     args = parser.parse_args()
@@ -581,15 +662,18 @@ if __name__ == '__main__':
         print('starting the hierarchical clustering ... ')
         full_res = ca.hierarchical_clustering(Xs, filename_ext=filename_ext, indices=indices,
                                               load_clustering=args.load_clustering, distance=args.distance,
-                                              method=args.method)
+                                              method=args.method, cluster_fusion=args.cluster_fusion)
         
     if args.cluster_maps:
         print('exporting the cluster maps')
-        ca.export_cell_cluster_maps(cluster_filename = filename_ext)
+        cluster_fusion = False
+        if args.cluster_fusion:
+            cluster_fusion = True
+        ca.export_cell_cluster_maps(cluster_filename=filename_ext, cluster_fusion=cluster_fusion)
 
     if args.cluster_galleries:
         print('exporting the cluster galleries')
-        ca.export_cluster_galleries(cluster_filename = filename_ext)
+        ca.export_cluster_galleries(cluster_filename=filename_ext, nb_rows=40)
         
     print('DONE')
         

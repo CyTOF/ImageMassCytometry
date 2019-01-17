@@ -3,15 +3,15 @@
 # Tonsil_120828_D18-2A_5MAY2017_1
 
 # the tissue
-dataset = 'Tonsil_D1'
+dataset = 'Tonsil_D2'
 
 marker_list = ['CD19', 'CD3']
 
 # folder settings
 base_folder = '/Users/twalter/data/Elodie/'
 input_folder = os.path.join(base_folder, 'new_data', dataset)
-output_folder = os.path.join(base_folder, 'results', dataset)
-debug_folder = os.path.join(base_folder, 'debug')
+output_folder = os.path.join(base_folder, 'results_revision', dataset)
+debug_folder = os.path.join(base_folder, 'debug_revision')
 plot_folder = os.path.join(output_folder, 'plots')
 
 # ilastik folder settings
@@ -35,6 +35,8 @@ thresh_alpha = 1.2
 
 prefilter_asf_sizes = [1, 2, 4, 8]
 
+#Il faut ajouter CD1c aux autres canaux déjà inclus la fois précédente, c'est-à-dire 
+# E-cadherin, aSMA, CD45, IL-21, CXCL13, CD279, CD3, CD45RA, Bcl6, CD19, HLA-DR, CD11c, CD14, CD68, CD206, CD370, CD141, CD123.
 
 cluster_fusion = {
 'Tonsil_D1': {'Macrophage' : [4, 9, 14, 34],
@@ -80,7 +82,7 @@ cluster_markers = {
     'Tonsil_D2': ['E-Cadherin', 'aSMA', 'CD45', 'IL-21',                   
                   'CXCL13', 'CD279(PD-1)', 'CD3', 'CD45RA',                   
                   'Bcl-6', 'CD19', 'HLA-DR', 'CD11c', 'CD14',
-                  'CD68', 'CD206', 'CD370', 'CD141', 'CD123'],
+                  'CD68', 'CD206', 'CD370', 'CD141', 'CD123', 'CD1c-biotin-NA'],
     'Tonsil_120628_D1-2A_4MAY2017_1': ['E-Cadherin', 'AlphaSMA', 'CD45', 'IL21', 'CXCL13',
                                        'PD1', 'CD3', 'CD45RA', 'Bcl6', 'CD19', 'CD11c',
                                        'CD14', 'Bcl2', 'CD8a', 'FoxP3', 'KI67'],
@@ -89,6 +91,7 @@ cluster_markers = {
                                         'CD14', 'Bcl2', 'CD8a', 'FoxP3', 'KI67'],
 }
 
+#E-cadherin, aSMA, CD45, IL-21, CXCL13, CD279, CD3, CD45RA, Bcl6, CD19, HLA-DR, CD11c, CD14, CD68, CD206, CD370, CD141, CD123
 
 # This is no longer used
 populations = {

@@ -660,7 +660,7 @@ class CellDetection(object):
         start_time = time.time()
         membrane_img = self.projection()
         diff_time = time.time() - start_time
-        print('\ttime elapsed, fissure exclusion: %.2f s' % diff_time)
+        print('\ttime elapsed, membrane extraction: %.2f s' % diff_time)
 
         print('Voronoi diagram ... ')
         start_time = time.time()
@@ -831,3 +831,4 @@ if __name__ == '__main__':
         print(" *** Make segmentation *** ")
         image = cd()
         cd.write_image(image)
+
