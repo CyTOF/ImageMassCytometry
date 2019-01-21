@@ -32,6 +32,7 @@ from skimage.transform import rescale, resize, downscale_local_mean
 if 'CLUSTER_ENV' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
 else:
     import matplotlib.pyplot as plt
 
