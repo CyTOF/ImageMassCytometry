@@ -29,7 +29,12 @@ from settings import Settings, overwrite_settings
 
 from skimage.transform import rescale, resize, downscale_local_mean
 
-import matplotlib.pyplot as plt
+if 'CLUSTER_ENV' in os.environ:
+    import matplotlib
+    matplotlib.use('Agg')
+else:
+    import matplotlib.pyplot as plt
+
 from scipy.stats import gaussian_kde, binom
 
 from numpy.random import permutation
