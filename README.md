@@ -1,11 +1,16 @@
 # Imaging Mass Cytometry 
 
-Tools to analyze imaging mass cytometry data.
-These software tools have been developed in a collaboration between Thomas Walter and Elodie Segura. 
+Tools to analyze imaging mass cytometry data. These software tools have been developed in a collaboration between [Thomas Walter](http://members.cbio.mines-paristech.fr/~twalter/index.html) (Centre for Computational Biology, Mines ParisTech) and Elodie Segura (Institut Curie). This is a first very preliminary version; this README shows how to produce the results in [1]. 
+
+## Imaging Technique
+
+The images have been produced by [Fluidigm Canada Inc](https://www.fluidigm.com). Each channel corresponds to one protein (like in immunofluorescence), but we have typically tens of channels. In order to import the data into our software, we first need to export it with the MCD viewer provided by Fluidigm as OME tiff (each channel is one image). 
 
 ## Preparation of data for processing
 
-We assume that we have data extracted with MCD viewer as OME tiff. 
+We assume that we have a stack of tiff files, each channel correponding to one protein. 
+For instance, the data might have been exported via the MCD viewer as OME tiff.
+
 The first script will copy and rename these files such that they can be easily interpreted by 
 the program. 
 
@@ -70,3 +75,7 @@ Then, you can recover the results, and you can generate the cluster maps.
 ## Distance analysis
 
 `python distance_analysis.py -s ./ims_2018_08_23.py --tissue_id Tonsil_D2`
+
+## References
+
+1. Durand et al. Human lymphoid organ cDC2 and macrophages play complementary roles in the induction of T follicular helper responses. Journal of Experimental Medicine (in press).
