@@ -138,6 +138,7 @@ class ClusterAnalysis(object):
             # centers = np.array([props[k]['centroid'] for k in range(len(props))])
             X[:,j] = intensities
         
+        print('read X: %i x %i' % (N, P))
         return X 
     
     def normalize(self, X, method='z'):
@@ -515,8 +516,6 @@ class ClusterAnalysis(object):
         # number of cells
         N = np.max(ws)
 
-        pdb.set_trace()
-        
         background, b_region, t_region = self.ilastik.read_region_images()
         region_image = np.zeros(b_region.shape, dtype=np.uint8)
         region_image[b_region>0] = 100

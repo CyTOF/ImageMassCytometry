@@ -51,7 +51,21 @@ Cell segmentation (blob detection and watershed). This takes a few seconds.
 
 ## Clustering
 
-`python clustering.py -s ./ims_2018_08_23.py --tissue_id Tonsil_D2 --load_clustering --nb_clusters 60  --distance euclidean --method ward --cluster_maps --cluster_galleries --cluster_fusion`
+Test whether everything works fine (important: use downsample to reduce the number of cells.)
+
+`python clustering.py -s ./ims_2019_01_16.py --tissue_id Tonsil_D2 --nb_clusters 60  --distance euclidean --method ward --cluster_maps --cluster_galleries --cluster_fusion --downsample 1000`
+
+Then, move to the cluster and write a cluster script (see for instance cluster_script_revision.sh)
+It is important that the paths are set correctly in the settings file.
+Run the script on the cluster:
+
+`sbatch cluster_script_revision.sh`
+`squeue -u twalter`
+
+Then, you can recover the results, and you can generate the cluster maps.
+
+`python clustering.py -s ./ims_2019_01_27_revision.py --tissue_id Tonsil_D2 --load_clustering --nb_clusters 60  --distance euclidean --method ward --cluster_maps --cluster_galleries --cluster_fusion`
+
 
 ## Distance analysis
 
