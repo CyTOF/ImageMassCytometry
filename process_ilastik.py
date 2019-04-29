@@ -50,6 +50,9 @@ class Ilastik(object):
         return imout
     
     def read_region_images(self):
+        """
+        reads the region images and does some postfiltering. 
+        """
         filename = self.settings.ilastik_filename
             
         im_small = skimage.io.imread(filename)
@@ -89,42 +92,10 @@ class Ilastik(object):
         skimage.io.imsave(filename, region_image)
         return
 
-    # DEPRECATED
-    # postprocessing is done during reading (see function above).
-    def _post_filter(self):
-        raw_filename = os.path.join(self.settings.ilastik_folder,
-                                    'raw_ilastik_segmentations',
-                                    'rgb_%s_Simple Segmentation.png' % self.settings.dataset)
-        if not os.path.isfile(raw_filename):
-            copy_filename = os.path.join(self.settings.ilastik_folder,
-                                         'rgb_%s_Simple Segmentation.png' % self.settings.dataset)
-            if not os.path.isfile(copy_filename):
-                raise ValueError("please run Ilastik first.")
-            shutil.copyfile(copy_filename, raw_filename)
-
-        img = skimage.io.imread(raw_filename)
-
-        values = np.unique(img)
-        target_values = [0, 128, 255]
-
-        # reattribution of values
-        for k, value in enumerate(values.tolist()):
-            img[img==value] = target_values[min(k, len(target_values) - 1)]
-
-        im_pref1 = opening(img, disk(2)).astype(np.uint8)
-        im_pref = median(im_pref1, disk(4))
-        im_open = reconstruction(opening(im_pref, disk(5)).astype(np.uint8),
-                                 im_pref.astype(np.uint8), method='dilation').astype(np.uint8)
-        #im_close = closing(im_open, disk(3))
-        im_close = reconstruction(closing(im_open, disk(6)).astype(np.uint8), 
-                                  im_open.astype(np.uint8), method='erosion').astype(np.uint8)
-        
-        new_filename = os.path.join(self.settings.ilastik_folder, 
-                                    'rgb_%s_Simple Segmentation.png' % self.settings.dataset)
-        skimage.io.imsave(new_filename, im_close)
-        return
-
     def post_processing(self):
+        """
+        post_processing only normalizes the output image.
+        """
         filename = self.settings.ilastik_filename
         img = skimage.io.imread(filename)
         img_normalized = 255.0 * (img - img.min()) / (img.max() - img.min())
@@ -132,9 +103,13 @@ class Ilastik(object):
         return
     
     def prepare(self):
+        """
+        prepare loads three images to make an RGB image which can then be used in Ilastik
+        for region annotation and segmentation. 
+        """
         rgb_folder = self.settings.ilastik_input_rgb_folder
-        prep_folder = self.settings.ilastik_input_folder
-        for folder in [rgb_folder, prep_folder]: 
+        #prep_folder = self.settings.ilastik_input_folder
+        for folder in [rgb_folder]: #, prep_folder]: 
             if not os.path.isdir(folder): 
                 os.makedirs(folder)
 

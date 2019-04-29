@@ -11,14 +11,14 @@ def overwrite_settings(settings, dataset):
     settings.plot_folder = settings.plot_folder.replace(old_dataset, dataset) #os.path.join(settings.output_folder, 'plots')
 
     # ilastik folder settings
-    settings.ilastik_input_folder = settings.ilastik_input_folder.replace(old_dataset, dataset)
+    #settings.ilastik_input_folder = settings.ilastik_input_folder.replace(old_dataset, dataset)
     settings.ilastik_input_rgb_folder = settings.ilastik_input_rgb_folder.replace(old_dataset, dataset)   
     settings.ilastik_input_rgb_filename = settings.ilastik_input_rgb_filename.replace(old_dataset, dataset)
-    settings.ilastik_folder = settings.ilastik_folder.replace(old_dataset, dataset)
+    #settings.ilastik_folder = settings.ilastik_folder.replace(old_dataset, dataset)
 
-    settings.ilastik_filename = settings.ilastik_filename.replace(old_dataset, dataset)
-    settings.ilastik_backup_filename = settings.ilastik_backup_filename.replace(old_dataset, dataset)
-    settings.downsample_image = settings.downsample_image.replace(old_dataset, dataset)
+    #settings.ilastik_filename = settings.ilastik_filename.replace(old_dataset, dataset)
+    #settings.ilastik_backup_filename = settings.ilastik_backup_filename.replace(old_dataset, dataset)
+    #settings.downsample_image = settings.downsample_image.replace(old_dataset, dataset)
     
     settings.makefolders = [settings.output_folder, 
                             settings.debug_folder, 

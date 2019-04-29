@@ -1,52 +1,46 @@
-import os, sys, re, time
-import numpy as np
+import os, re, time
 import argparse
-import pdb 
-
-from sequence_importer import SequenceImporter
-from skimage.morphology import reconstruction
-from scipy.ndimage import gaussian_laplace
-from scipy.ndimage.morphology import distance_transform_edt
-
-# skimage imports
-import skimage.io
-
-from skimage.filters import gaussian, median, laplace
-from skimage.morphology import area_closing
-from skimage.morphology import opening, closing, disk, square, dilation, erosion, watershed
-from skimage.morphology import remove_small_holes, remove_small_objects
-from skimage.transform import rescale, resize, downscale_local_mean
-from skimage.feature import blob_log, blob_doh, peak_local_max
-from skimage.measure import label, regionprops
-from skimage.color import grey2rgb
-from skimage.morphology import h_maxima
-from skimage.draw import circle_perimeter, circle_perimeter_aa, circle
-from skimage.filters import threshold_otsu
-from skimage.filters import threshold_isodata
-from skimage.morphology import diamond, reconstruction
-
-from settings import Settings, overwrite_settings
-
-from skimage.transform import rescale, resize, downscale_local_mean
+import pickle
+import shutil
 
 if 'CLUSTER_ENV' in os.environ:
+    # This is a setting to run the code on the cluster
+    # if the environmental variable CLUSTER_ENV is defined, then 
+    # matplotlib is imported in a different way. 
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 else:
+    # This is the standard 
     import matplotlib.pyplot as plt
 
+# numpy imports
+import numpy as np
+from numpy.random import permutation
+
+# skimage imports
+import skimage.io
+from skimage.filters import gaussian, laplace
+from skimage.morphology import disk, dilation, erosion, watershed
+from skimage.morphology import remove_small_holes, remove_small_objects
+from skimage.feature import blob_log, blob_doh
+from skimage.measure import label, regionprops
+from skimage.color import grey2rgb
+from skimage.morphology import h_maxima
+from skimage.draw import circle_perimeter, circle_perimeter_aa, circle
+from skimage.morphology import reconstruction
+
+# scipy imports 
+from scipy.ndimage.morphology import distance_transform_edt
 from scipy.stats import gaussian_kde, binom
 
-from numpy.random import permutation
-import pickle
-
+# misc
 from colour import Color
 
-import shutil
-
+# project imports
+from sequence_importer import SequenceImporter
+from settings import Settings, overwrite_settings
 from fissure_detection import FissureDetection
-from process_ilastik import Ilastik
 from visualization import Overlays
 
 
@@ -68,23 +62,6 @@ class SpotDetector(object):
     # they are isolated local maxima of small size (defined by area_threshold)
     # area_threshold = 1 --> remove single pixels
     # area_threshold = 2 --> remove chunks of 2 neighboring pixels (8-connectivity)
-    def remove_individual_pixels_old(self, img, threshold=0.1, 
-                                 area_threshold=2):
-        mask = np.zeros(img.shape, dtype=np.uint8)
-        mask[img >= threshold] = 255
-        
-        bigger_objects = remove_small_objects(mask.astype(np.bool),
-                                              min_size=area_threshold + 1,
-                                              connectivity=2)
-        mask[bigger_objects] = 0
-        
-        ring_se = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
-        dil_img = dilation(img, ring_se)
-        out = img.copy()
-        out[mask > 0] = dil_img[mask>0]
-
-        return out
-
     def remove_individual_pixels(self, img, threshold=0.1, 
                                  area_threshold=2):
         mask = np.zeros(img.shape, dtype=np.uint8)
@@ -212,8 +189,6 @@ class SpotDetector(object):
         return rgb_image
 
     def export_spot_detection(self, img, blobs, filename):
-        #fig = plt.figure()
-        #ax = fig.gca()
 
         fig, axes = plt.subplots(1, 2, figsize=(13, 6), sharex=True, sharey=True,
                                  subplot_kw={'adjustable': 'box-forced'})
@@ -233,8 +208,6 @@ class SpotDetector(object):
 
         ax[1].axis('off')
         ax[1].set_title('Spot Detections')
-
-        #plt.imshow(img, cmap="Greys_r")
 
         r = 4
         
@@ -244,47 +217,7 @@ class SpotDetector(object):
         fig.savefig(filename)
         return
 
-    def export_spot_detection2(self, img, blobs, filename):
-        #fig = plt.figure()
-        #ax = fig.gca()
-
-        fig, axes = plt.subplots(1, 2, figsize=(13, 6), sharex=True, sharey=True,
-                                 subplot_kw={'adjustable': 'box-forced'})
-        ax = axes.ravel()
-        if len(img.shape) <= 2:
-            ax[0].imshow(img, cmap=plt.cm.gray)
-            ax[1].imshow(img, cmap=plt.cm.gray)
-        elif img.shape[-1] < 2:
-            ax[0].imshow(img, cmap=plt.cm.gray)
-            ax[1].imshow(img, cmap=plt.cm.gray)
-        else:
-            ax[0].imshow(img)
-            ax[1].imshow(img)
-
-        ax[0].axis('off')
-        ax[0].set_title('Original')
-
-        ax[1].axis('off')
-        ax[1].set_title('Spot Detections')
-
-        #plt.imshow(img, cmap="Greys_r")
-
-        #r = 5
-        
-        for y, x, r in blobs:
-            c = plt.Circle((x,y), r, color="red", linewidth=2, fill=False)
-            ax[1].add_artist(c)
-        fig.savefig(filename)
-        return
     
-    def blob_detection(self, img):
-        #image, min_sigma=1, max_sigma=50, num_sigma=10, threshold=0.2, overlap=0.5, log_scale=False
-        coordinates = blob_log(img, min_sigma = 4, max_sigma = 10, num_sigma = 3,
-                               threshold = 0.05, log_scale = False)
-        #coordinates = blob_doh(img, min_sigma=4, max_sigma=10, num_sigma=3, threshold=.01)
-        coordinates[:, 2] = coordinates[:, 2] * np.sqrt(2)
-        return coordinates
-
     def save_debug_img(self, img, filename, normalized = True, alpha = 1.0,
                        low_perc = 10, high_perc = 99):
 
@@ -310,74 +243,32 @@ class SpotDetector(object):
                           img)
         return
 
-    def clean_log(self, img, prefix='debug', eps=0.008, 
-                  method='local_max', h=0.004, sigma=2.4, k=3,
-                  gauss_threshold=30.0):
-
-        gauss_img = gaussian(img, sigma = sigma)
-
-        log = laplace(gauss_img, ksize=k)
-
-        # just threshold
-        if method == 'threshold': 
-            spots = np.zeros(log.shape, dtype=np.uint8)
-            spots[log>eps] = 1
-            spots[gauss_img<=gauss_threshold] = 0
-        elif method == 'local_max':
-            spots = h_maxima(log, h=h)
-            spots[log<=eps] = 0
-            spots[gauss_img<=gauss_threshold] = 0
-
-        lab = label(spots)
-        properties = regionprops(lab)
-        coordinates = [properties[i]['centroid'] for i in range(len(properties))]
-
-        return coordinates
-
     def simple_log(self, img, prefix='debug', eps=0.008, 
                    method='local_max', h=0.004, sigma=2.4, k=3,
                    gauss_threshold=30.0):
-        #img_normalized = img.astype(np.float32) / 100.0
-        #img_normalized[img_normalized > 1.0] = 1.0
-        #img_normalized[img_normalized < 0.0] = 0.0
-        #pref = median(img.astype(np.uint8), disk(1))
 
         gauss_img = gaussian(img, sigma = sigma)
         if self.settings.debug:
-            #self.save_debug_img_float(img_normalized, 'debug_spot_detection_original.tif')
-            #self.save_debug_img_float(temp, 'debug_spot_detection_gaussian.tif')
-            #self.save_debug_img(pref, '%s_spot_detection_median.png' % prefix, False, alpha=1.0)
-
             self.save_debug_img(img, '%s_spot_detection_original.png' % prefix, False, alpha=1.0)
             self.save_debug_img(gauss_img, '%s_spot_detection_gaussian.png' % prefix, False, alpha=255)
 
         log = laplace(gauss_img, ksize=k)
+
         if self.settings.debug:
+            # In this case, we also generate debug images.
             print('min, max: ', log.min(), log.max())
-            #histo = np.histogram(log)
-            #print histo
-            #self.save_debug_img_float(log, 'debug_spot_detection_laplacian_unnormalized.tif')
+
             temp = 0.5 * (10 * log + 1.0)
             temp[temp > 1.0] = 1.0
             temp[temp < 0.0] = 0.0
             self.save_debug_img(temp, '%s_spot_detection_laplacian.png' % prefix, False, alpha=255.0)
+
             temp = log.copy()
             temp[temp <= eps] = 0
             temp = temp * 1000
             temp[temp > 255.0] = 255
             temp = temp.astype(np.uint8)
             self.save_debug_img(temp, '%s_spot_detection_laplacian_eps_to_zero.png' % prefix, False, alpha=1)
-            #skimage.io.imsave(os.path.join(self.settings.debug_folder, 
-            #                               'spot_detection_laplacian_unnormalized.tif'),
-            #                  log)
-
-        #log = 2 * (log - log.min()) / (log.max() - log.min()) - 1
-        #if self.settings.debug:
-        #    print 'after normalization: min, max: ', log.min(), log.max()
-        #    #self.save_debug_img_float(log, 'debug_spot_detection_after_normalization.tif')
-        #    self.save_debug_img(log, 'debug_spot_detection_laplacian_normalized.png', False, alpha=255)
-
-        #coordinates = peak_local_max(log, min_distance=3, indices=True, threshold_abs=0.00000001)
 
         # just threshold
         if method == 'threshold': 
@@ -393,7 +284,9 @@ class SpotDetector(object):
         properties = regionprops(lab)
         coordinates = [(int(properties[i]['centroid'][0]), int(properties[i]['centroid'][1]))
                        for i in range(len(properties))]
+
         if self.settings.debug:
+            # In this case, we also generate debug images.
             ov = Overlays()
             rgb_img = ov.overlay_grey_img(img, spots, {1: (255, 0, 0)}, True)
             filename = os.path.join(self.settings.debug_folder,
@@ -748,10 +641,9 @@ class CellDetection(object):
     def write_image(self, image):
         filename = os.path.join(self.image_result_folder, 
                                 'dna_cell_segmentation.tiff')
+
+        # usual skimage exporter does not work here        
         skimage.external.tifffile.imsave(filename, image.astype('uint32'))
-        # pdb.set_trace()
-        # bug: this does not work ! skimage.io.imsave(filename, image)
-        # fp = open(filename, image)
         
         rgb_image = self.make_random_colors(image)
         filename = os.path.join(self.image_result_folder, 
@@ -766,10 +658,9 @@ class CellDetection(object):
             os.makedirs(out_folder)
         filename = os.path.join(out_folder, 
                                 'dna_cell_segmentation.tiff')
+
+        # usual skimage exporter does not work here
         skimage.external.tifffile.imsave(filename, image.astype('uint32'))
-        # pdb.set_trace()
-        # bug: this does not work ! skimage.io.imsave(filename, image)
-        # fp = open(filename, image)
         
         rgb_image = self.make_random_colors(image)
         filename = os.path.join(out_folder, 
@@ -801,9 +692,7 @@ class CellDetection(object):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser( \
-        description=('Run post filter on Ilastik results in order to'
-                     'get a smoother output and to assign grey levels'
-                     'according to what is required for the rest.'))
+        description=('Performs cell segmentation'))
 
     parser.add_argument('-s', '--settings_file', dest='settings_file', required=True,
                         type=str,

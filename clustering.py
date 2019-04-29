@@ -76,19 +76,6 @@ class ClusterAnalysis(object):
         self.cell_detector = CellDetection(settings=self.settings)
         self.ilastik = Ilastik(settings=self.settings)
         
-        #self.markers = ['Bcl-6', 'CD279(PD-1)', 'CD3',
-        #                'CD45', 'CD14',
-        #                'CD370', 'CD141',
-        #                'CD11c',  'CD1c-biotin-NA',  'HLA-DR',
-        #                'CD123', 'CD303(BDCA2)']
-
-        #CD1c : remove (too bad)
-        #ICOS : enlever (similaire a PD1)
-        #CD185 : does not look good (should only be in B-region)
-        #CD56 : probably wrong marker --> check in the pipeline
-        #CD11b : unsure what to do ... artefact, spatial effect ? 
-        #CD303 : high noise level, there should be quite a number of cells in T-region.
-
         # all markers except for empty, 
         self.all_markers = ['CD206', 'IL-21', 'CD185(CXCR5)', 'CD45', 'CXCL13', 
                             'CD1c-biotin-NA', 'CD303(BDCA2)', 'CD11b', 'Bcl-6', 'CD45RA', 
@@ -104,9 +91,6 @@ class ClusterAnalysis(object):
 
         self.markers = self.settings.cluster_markers[self.settings.dataset]
         self.nb_clusters = 60
-        # + CD19 (cellules B), abondant !
-        # + E-cadherin (la crypte)
-        # + alphasma (vaisseaux sanguins)
  
     def get_data(self, force=False):
         
@@ -229,6 +213,7 @@ class ClusterAnalysis(object):
 
         # perform clustering
         if not load_clustering:
+            full_res = None
             cluster_res = hierarchy.linkage(Xs, method=method, metric=distance)
         else:            
             filename = os.path.join(self.cluster_folder, 'cluster_assignment%s.pickle' % filename_ext)
@@ -247,7 +232,8 @@ class ClusterAnalysis(object):
         res = dict(zip(range(self.nb_clusters), [np.where(cluster_assignment==i) for i in range(self.nb_clusters)]))
 
         if cluster_fusion:
-            if not full_res['indices'] is None:
+            indices = full_res['indices']
+            if indices is None:
                 raise ValueError('It is not possible to make cluster fusions and downsampling.')
             fused_clusters = {}
             fusion_info = self.settings.cluster_fusion[self.settings.dataset]
@@ -259,15 +245,15 @@ class ClusterAnalysis(object):
                 fused_cluster_assignment_indices[fusion_info[population_name]] = k
             
             cluster_assignment = fused_cluster_assignment_indices[cluster_assignment]
-            col_pal = sns.color_palette("husl", len(fusion_info)) + [(1,1,1)]  
+            col_pal = sns.color_palette("husl", len(fusion_info)) + [(1,1,1)]
             col_vec = np.array(col_pal)[cluster_assignment]
             res = fused_clusters
             res[len(cluster_names)] = np.where(cluster_assignment==len(cluster_names))
             filename_ext = '%s_cluster_fusion' % filename_ext
-            
+
 
         cmap = sns.light_palette("navy", as_cmap=True)
-        
+
         print('starting clustering/heatmap generation ... ')
         g = sns.clustermap(df, row_linkage=cluster_res, robust=True, cmap=cmap, 
                            col_cluster=False, yticklabels=False,
