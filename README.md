@@ -12,9 +12,9 @@ Currently, our software is a set of python scripts.
 
 Here, we give a series of installation commands to make this work in a conda virtual environment. The dependencies are listed [here](requirements.txt). In this file, we have written the absolute requirements obtained by `pip freeze > requirements.txt`. It is likely that the scripts will also work with more recent versions of the packages. 
 
-```conda create -n improt python=3.6 anaconda
-source activate improt
-pip install -r requirements.txt```
+`conda create -n improt python=3.6 anaconda`
+`source activate improt`
+`pip install -r requirements.txt`
 
 ## Preparation of data for processing
 
