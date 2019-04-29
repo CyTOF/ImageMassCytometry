@@ -5,24 +5,23 @@ def overwrite_settings(settings, dataset):
     
     old_dataset = settings.dataset
     settings.dataset = dataset
-    settings.input_folder = settings.input_folder.replace(old_dataset, dataset) #os.path.join(base_folder, 'new_data', dataset)
-    settings.output_folder = settings.output_folder.replace(old_dataset, dataset) #os.path.join(base_folder, 'results', dataset)
-    settings.debug_folder = settings.debug_folder.replace(old_dataset, dataset) #os.path.join(base_folder, 'debug')
-    settings.plot_folder = settings.plot_folder.replace(old_dataset, dataset) #os.path.join(settings.output_folder, 'plots')
+    settings.input_folder = settings.input_folder.replace(old_dataset, dataset)
+    settings.output_folder = settings.output_folder.replace(old_dataset, dataset)
+    settings.debug_folder = settings.debug_folder.replace(old_dataset, dataset)
+    settings.plot_folder = settings.plot_folder.replace(old_dataset, dataset)
 
     # ilastik folder settings
-    #settings.ilastik_input_folder = settings.ilastik_input_folder.replace(old_dataset, dataset)
     settings.ilastik_input_rgb_folder = settings.ilastik_input_rgb_folder.replace(old_dataset, dataset)   
     settings.ilastik_input_rgb_filename = settings.ilastik_input_rgb_filename.replace(old_dataset, dataset)
-    #settings.ilastik_folder = settings.ilastik_folder.replace(old_dataset, dataset)
+    settings.ilastik_folder = settings.ilastik_folder.replace(old_dataset, dataset)
+    settings.ilastik_filename = settings.ilastik_filename.replace(old_dataset, dataset)
 
-    #settings.ilastik_filename = settings.ilastik_filename.replace(old_dataset, dataset)
-    #settings.ilastik_backup_filename = settings.ilastik_backup_filename.replace(old_dataset, dataset)
-    #settings.downsample_image = settings.downsample_image.replace(old_dataset, dataset)
-    
     settings.makefolders = [settings.output_folder, 
                             settings.debug_folder, 
-                            settings.plot_folder]
+                            settings.plot_folder, 
+                            settings.ilastik_folder,
+                            settings.ilastik_input_rgb_folder
+                            ]
     return settings
 
 class Settings(object):
@@ -43,8 +42,6 @@ class Settings(object):
         if dctGlobals is None:
             dctGlobals = globals()
 
-        #self.settings_dir = os.path.abspath(os.path.dirname(self.strFilename))
-        #execfile(self.strFilename, dctGlobals, self.__dict__)
         exec(open(self.strFilename).read(), dctGlobals, self.__dict__)
     
     def update(self, dctNew, bExcludeNone=False):

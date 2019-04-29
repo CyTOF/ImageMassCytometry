@@ -11,14 +11,10 @@ debug_folder = os.path.join(base_folder, dataset, 'debug')
 plot_folder = os.path.join(output_folder, 'plots')
 
 # ilastik folder settings
-#ilastik_input_folder = os.path.join(base_folder, dataset, 'Ilastik', 'channels')
 ilastik_input_rgb_folder = os.path.join(base_folder, dataset, 'Ilastik', 'rgb')
 ilastik_input_rgb_filename = os.path.join(ilastik_input_rgb_folder, 'rgb_%s.tif' % dataset)
-
 ilastik_folder = os.path.join(base_folder, dataset, 'Ilastik', 'result')
 ilastik_filename = os.path.join(ilastik_folder, 'rgb_%s_Simple Segmentation.png' % dataset)
-#ilastik_backup_filename = os.path.join(ilastik_folder, 'rgb_%s_Simple Segmentation_backup.png' % dataset)
-#downsample_image = os.path.join(ilastik_folder, 'rgb_%s.tif' % dataset)
 
 makefolders = [output_folder, debug_folder, plot_folder, ilastik_folder]
 debug = True
@@ -32,10 +28,6 @@ dna_spot_detection = {#'eps': 0.016,
                   'normalization_low': 0.1,
                   'normalization_high': 5.0,
                   'area_threshold': 5}
-
-
-#Il faut ajouter CD1c aux autres canaux déjà inclus la fois précédente, c'est-à-dire 
-# E-cadherin, aSMA, CD45, IL-21, CXCL13, CD279, CD3, CD45RA, Bcl6, CD19, HLA-DR, CD11c, CD14, CD68, CD206, CD370, CD141, CD123.
 
 cluster_fusion = {
 'Tonsil_D1': {'Macrophage' : [4, 9, 14, 34],
@@ -89,51 +81,3 @@ cluster_markers = {
                                         'PD1', 'CD3', 'CD45RA', 'Bcl6', 'CD19', 'CD11c',
                                         'CD14', 'Bcl2', 'CD8a', 'FoxP3', 'KI67'],
 }
-
-#E-cadherin, aSMA, CD45, IL-21, CXCL13, CD279, CD3, CD45RA, Bcl6, CD19, HLA-DR, CD11c, CD14, CD68, CD206, CD370, CD141, CD123
-
-# This is no longer used
-# populations = {
-#     'Tonsil_D1': {
-#         'Tfh' : ['Bcl-6', 'CD279(PD-1)', 'CD3'],
-#         'Macrophage' : ['CD45', 'CD14', 'CD11c'],
-#         'DC1' : ['CD370', 'CD141',  'HLA-DR'],
-#         'DC2' : ['CD11c',  'CD1c-biotin-NA',  'HLA-DR'],
-#         'pDC' : ['CD123', 'CD303(BDCA2)',  'HLA-DR'],
-#         },
-#     'Tonsil_D2': {
-#         'Tfh' : ['Bcl-6', 'CD279(PD-1)', 'CD3'],
-#         'Macrophage' : ['CD45', 'CD14', 'CD11c'],
-#         'DC1' : ['CD370', 'CD141',  'HLA-DR'],
-#         'DC2' : ['CD11c',  'CD1c-biotin-NA',  'HLA-DR'],
-#         'pDC' : ['CD123', 'CD303(BDCA2)',  'HLA-DR'],
-#         },
-#     }
-
-
-# prefilter_gaussian_bandwidth = 3.0
-# prefilter_diameter_closing = 20
-# prefilter_area_closing = 400
-# prefilter_median_size = 6
-# thresh_alpha = 1.2
-
-# prefilter_asf_sizes = [1, 2, 4, 8]
-
-# spot_detection = {#'eps': 0.016,
-#                   'eps': 0.02,
-#                   'h': 0.006,
-#                   'sigma': 2.3,
-#                   'gauss_threshold': 10,
-#                   'normalization_low': 0.1,
-#                   'normalization_high': 8.0,
-#                   'area_threshold': 5}
-
-
-# sample_spot_detection = {#'eps': 0.016,
-#                   'eps': 0.02,
-#                   'h': 0.006,
-#                   'sigma': 2.3,
-#                   'gauss_threshold': 0.1,
-#                   'normalization_low': 0.1,
-#                   'normalization_high': 5.0,
-#                   'area_threshold': 5}

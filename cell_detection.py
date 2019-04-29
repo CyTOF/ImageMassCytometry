@@ -137,7 +137,6 @@ class SpotDetector(object):
         plt.title('pixel noise: %s (%.2f, %.2f)' % (channel_name, mean_val, mean_val + 2 * std))
         plt.xlabel('value of single pixels')
         plt.ylabel('number of occurences')
-        #plt.show()
         fig.savefig(filename)
         
         # image histograms
@@ -149,7 +148,6 @@ class SpotDetector(object):
         fig = plt.figure()
         
         select = img[img > threshold]
-        #select = img[img>0]
         mean_val = np.mean(select)
         std = np.std(select)
         bins = np.hstack([np.arange(0, 40, 0.5),
@@ -161,7 +159,6 @@ class SpotDetector(object):
         plt.title('image histogram: %s (%.2f, %.2f)' % (channel_name, mean_val, mean_val + 2 * std))
         plt.xlabel('grey level')
         plt.ylabel('number of occurences')
-        #plt.show()
         fig.savefig(filename)
 
         
@@ -182,8 +179,6 @@ class SpotDetector(object):
                 xx, yy = circle(int(x), int(y), 5, shape=(rgb_image.shape[1], rgb_image.shape[0]))
             x_coord.extend(xx)
             y_coord.extend(yy)
-            #x_coord.append(x)
-            #y_coord.append(y)
         rgb_image[(y_coord,x_coord)] = color
         
         return rgb_image
@@ -354,10 +349,8 @@ class SpotDetector(object):
         properties = regionprops(lab)
         coordinates = [properties[i]['centroid'] for i in range(len(properties))]
 
-        #gauss_img[:,:,i] = gaussian(image, sigma=1.0)
         props = regionprops(ws, gauss_img[:,:,i])
         intensities['gauss'][channel] = np.array([props[k]['mean_intensity'] for k in range(len(props))])
-        #perc = np.percentile(intensities['gauss'][channel],perc_for_vis)
         perc = np.percentile(gauss_img[:,:,i], perc_for_vis)
         maxvals['gauss'][channel] = perc[1]
         minvals['gauss'][channel] = perc[0]
