@@ -13,7 +13,9 @@ Currently, our software is a set of python scripts.
 Here, we give a series of installation commands to make this work in a conda virtual environment. The dependencies are listed [here](requirements.txt). In this file, we have written the absolute requirements obtained by `pip freeze > requirements.txt`. It is likely that the scripts will also work with more recent versions of the packages. 
 
 `conda create -n improt python=3.6 anaconda`
+
 `source activate improt`
+
 `pip install -r requirements.txt`
 
 ## Preparation of data for processing
@@ -77,7 +79,9 @@ Cell segmentation (blob detection and watershed). This takes a few seconds.
 `python cell_detection.py --settings_file ./ims_2019_04_29.py --tissue_id Tonsil_D2 --make_segmentation`
 
 This will generate the following files:
+
 `<project_data_folder>/<sample_id>/results/cell_segmentation/dna_cell_segmentation_random_colors.png`
+
 `<project_data_folder>/<sample_id>/results/cell_segmentation/dna_cell_segmentation.tiff`
 
 The most relevant file is the tiff-file, as it is a labeled image with all cells detected. The other file is for visual inspection. 
@@ -96,7 +100,9 @@ Test whether everything works fine (important: use downsample to reduce the numb
 `python clustering.py -s ./ims_2019_04_29.py --tissue_id Tonsil_D2 --hierarchical_clustering --nb_clusters 60  --distance euclidean --method ward --downsample 1000`
 
 This script will generate a pickle file and a heatmap:
+
 `<project_data_folder>/<sample_id>/results/clustering/cluster_assignment_normalization_percentile_metric_<distance>_method_<clustering method>.pickle`
+
 `<project_data_folder>/<sample_id>/results/clustering/clustering_normalization_percentile_metric_<distance>_method_<clustering method>.pickle`
 
 If you rerun the clustering algorithm (for instance without downsampling), this file will be overwritten. 
@@ -108,6 +114,7 @@ If this runs fine, you can make the clustering for the full data set. For this, 
 In our case, this was done on the compute cluster. Be aware that if the machine has no display associated to it, there can be a problem with matplotlib. For this, we have added a script that also sets the environmental variable: `cluster_script.sh`. This script can be submitted to the cluster. With `slurm` this can look like: 
 
 `sbatch cluster_script.sh`
+
 `squeue -u <your username>`
 
 Then, you can recover the results, and you can generate the cluster maps and cluster galleries.
