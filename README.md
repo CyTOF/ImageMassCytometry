@@ -1,10 +1,10 @@
 # Imaging Mass Cytometry 
 
-Tools to analyze imaging mass cytometry data. These software tools have been developed in a collaboration between [Thomas Walter](http://members.cbio.mines-paristech.fr/~twalter/index.html) (Centre for Computational Biology, Mines ParisTech) and Elodie Segura (Institut Curie). This is a first very preliminary version; this README shows how to produce the results published in [1]. 
+Tools to analyze imaging mass cytometry data. These software tools have been developed in a collaboration between [Thomas Walter](http://members.cbio.mines-paristech.fr/~twalter/index.html) (Centre for Computational Biology, Mines ParisTech) in collaboration with [Elodie Segura](https://science.curie.fr/members/elodie-segura/) (Institut Curie). This is a first very preliminary version; this README shows how to produce the results published in [1]. 
 
 ## Imaging Technique
 
-The images have been produced by [Fluidigm Canada Inc](https://www.fluidigm.com). Each channel corresponds to one protein (like in immunofluorescence), but we have typically tens of channels. In order to import the data into our software, we first need to export it with the MCD viewer provided by Fluidigm as OME tiff (each channel is one image). 
+The images in [1] have been produced by [Fluidigm Canada Inc](https://www.fluidigm.com). Each channel shows the spatial distribution of one protein in the same section of a human tonsil. In these data, we have typically tens of channels. In order to import the data into our software, we first need to export individual images with the MCD viewer provided by Fluidigm as OME tiff (each channel is one image). 
 
 ## Installation
 
